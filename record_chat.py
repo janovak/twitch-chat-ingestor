@@ -1,23 +1,17 @@
-from cassandra.auth import PlainTextAuthProvider
-from cassandra.cluster import Cluster
-from twitchAPI.twitch import Twitch
-from twitchAPI.oauth import UserAuthenticator
-from twitchAPI.type import AuthScope, ChatEvent
+from twitchAPI.type import ChatEvent
 from twitchAPI.chat import Chat, EventData, ChatMessage, ChatSub
 import asyncio
 import sys
 import uuid
 import json
 from datetime import datetime
-import auth.secrets as secrets
+import twitch
+import astra_db
 
-USER_SCOPE = [AuthScope.CHAT_READ]
 TARGET_CHANNEL = sys.argv[1]
 
 # connect to chat database
-auth_provider = PlainTextAuthProvider(secrets.get_chat_db_client_id(), secrets.get_chat_db_secret())
-cluster = Cluster(cloud=secrets.get_astra_db_cloud_config(), auth_provider=auth_provider)
-session = cluster.connect('chat_data')
+database_session = astra_db.get_session('chat_data')
 
 # this will be called when the event READY is triggered, which will be on bot start
 async def on_ready(ready_event: EventData):
@@ -74,7 +68,7 @@ def get_month():
 # this will be called whenever a message in a channel was send by either the bot OR another user
 async def on_message(msg: ChatMessage):
     print(msg.room.room_id, msg.sent_timestamp, msg.id)
-    session.execute(
+    database_session.execute(
         """
         INSERT INTO twitch_chat_by_broadcaster_and_timestamp (broadcaster_id, year_month, timestamp, message_id, message)
         VALUES (%s, %s, %s, %s, %s)
@@ -89,13 +83,10 @@ async def on_sub(sub: ChatSub):
 # this is where we set up the bot
 async def run():
     # set up twitch api instance and add user authentication with some scopes
-    twitch = await Twitch(secrets.get_twitch_api_client_id(), secrets.get_twitch_api_secret())
-    auth = UserAuthenticator(twitch, USER_SCOPE)
-    token, refresh_token = await auth.authenticate()
-    await twitch.set_user_authentication(token, USER_SCOPE, refresh_token)
+    twitch_session = await twitch.get_session()
 
     # create chat instance
-    chat = await Chat(twitch)
+    chat = await Chat(twitch_session)
 
     # register the handlers for the events you want
 
@@ -112,11 +103,11 @@ async def run():
 
     # lets run till we press enter in the console
     try:
-        input('press ENTER to stop\\n')
+        input('Press ENTER to stop\n')
     finally:
         # now we can close the chat bot and the twitch api client
         chat.stop()
-        await twitch.close()
+        await twitch_session.close()
 
 # lets run our setup
 asyncio.run(run())
