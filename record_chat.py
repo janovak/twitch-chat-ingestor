@@ -3,12 +3,6 @@ import sys
 import twitch
 import astra_db
 
-
-from pydispatch import dispatcher
-
-
-
-
 TARGET_CHANNEL = sys.argv[1]
 
 # connect to chat database

@@ -27,5 +27,4 @@ class DatabaseConnection:
         )
 
     def handle_chat_message(self, broadcaster_id, month, timestamp, message_id, message):
-        print('ack')
         self.insert(broadcaster_id, month, timestamp, message_id, message)
