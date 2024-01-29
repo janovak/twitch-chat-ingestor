@@ -1,6 +1,7 @@
 import auth.secrets as secrets
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
+from cassandra.query import BatchStatement
 from pydispatch import dispatcher
 
 SIGNAL = "CHAT_SIGNAL"
@@ -9,6 +10,9 @@ SIGNAL = "CHAT_SIGNAL"
 class DatabaseConnection:
     def __init__(self, keyspace):
         self.session = self.get_session(keyspace)
+        # not thread safe at the moment
+        self.batch = BatchStatement()
+        self.batch_counter = 0
         dispatcher.connect(
             self.handle_chat_message, signal=SIGNAL, sender=dispatcher.Any
         )
@@ -23,16 +27,25 @@ class DatabaseConnection:
         session = cluster.connect(keyspace)
         return session
 
-    def insert(self, broadcaster_id, month, timestamp, message_id, message):
-        self.session.execute(
+    def prepare(self, broadcaster_id, month, timestamp, message_id, message):
+        statement = self.session.prepare(
             """
             INSERT INTO twitch_chat_by_broadcaster_and_timestamp (broadcaster_id, year_month, timestamp, message_id, message)
-            VALUES (%s, %s, %s, %s, %s)
-            """,
-            (broadcaster_id, month, timestamp, message_id, message),
+            VALUES (?, ?, ?, ?, ?)
+            """
         )
+        self.batch.add(
+            statement, (broadcaster_id, month, timestamp, message_id, message)
+        )
+        self.batch_counter += 1
+
+    def insert_batch(self):
+        print("Inserting a batch of {} rows".format(self.batch_counter))
+        self.session.execute(self.batch)
+        self.batch.clear()
+        self.batch_counter = 0
 
     def handle_chat_message(
         self, broadcaster_id, month, timestamp, message_id, message
     ):
-        self.insert(broadcaster_id, month, timestamp, message_id, message)
+        self.prepare(broadcaster_id, month, timestamp, message_id, message)

@@ -1,3 +1,4 @@
+import asyncio
 import json
 import uuid
 from datetime import datetime
@@ -12,6 +13,19 @@ from twitchAPI.type import AuthScope, ChatEvent
 USER_SCOPE = [AuthScope.CHAT_READ]
 
 SIGNAL = "CHAT_SIGNAL"
+
+STREAMERS = [
+    "jynxzi",
+    "kaicenat",
+    "fps_shaka",
+    "caseoh_",
+    "ibai",
+    "gamesdonequick",
+    "illojuan",
+    "auronplay",
+    "gaules",
+    "xqc",
+]
 
 
 def serialize_message(msg: ChatMessage):
@@ -99,10 +113,10 @@ class TwitchAPIConnection:
 
     async def on_ready(self, ready_event: EventData):
         print("Bot is ready for work, joining channels")
-        await ready_event.chat.join_room("sneakylol")
+        tasks = [ready_event.chat.join_room(streamer) for streamer in STREAMERS]
+        await asyncio.gather(*tasks)
 
     async def on_message(self, msg: ChatMessage):
-        print(msg.room.room_id, msg.sent_timestamp, msg.id)
         dispatcher.send(
             signal=SIGNAL,
             sender="TWITCH",
