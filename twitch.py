@@ -1,13 +1,13 @@
 import json
-from datetime import datetime
-from twitchAPI.twitch import Twitch
-from twitchAPI.oauth import UserAuthenticator
-from twitchAPI.type import AuthScope, ChatEvent
-from twitchAPI.chat import Chat, EventData, ChatMessage
 import uuid
+from datetime import datetime
+
 import auth.secrets as secrets
-import asyncio
 from pydispatch import dispatcher
+from twitchAPI.chat import Chat, ChatMessage, EventData
+from twitchAPI.oauth import UserAuthenticator
+from twitchAPI.twitch import Twitch
+from twitchAPI.type import AuthScope, ChatEvent
 
 USER_SCOPE = [AuthScope.CHAT_READ]
 

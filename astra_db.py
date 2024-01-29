@@ -1,7 +1,6 @@
-import time
+import auth.secrets as secrets
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
-import auth.secrets as secrets
 from pydispatch import dispatcher
 
 SIGNAL = "CHAT_SIGNAL"

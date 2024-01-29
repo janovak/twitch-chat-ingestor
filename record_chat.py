@@ -1,7 +1,8 @@
 import asyncio
 import sys
-import twitch
+
 import astra_db
+import twitch
 
 TARGET_CHANNEL = sys.argv[1]
 
