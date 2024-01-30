@@ -2,6 +2,7 @@ import auth.secrets as secrets
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
 from cassandra.query import BatchStatement
+from cassandra.query import BatchType
 from pydispatch import dispatcher
 
 SIGNAL = "CHAT_SIGNAL"
@@ -11,7 +12,7 @@ class DatabaseConnection:
     def __init__(self, keyspace):
         self.session = self.get_session(keyspace)
         # not thread safe at the moment
-        self.batch = BatchStatement()
+        self.batch = BatchStatement(batch_type=BatchType.UNLOGGED)
         self.batch_counter = 0
         dispatcher.connect(
             self.handle_chat_message, signal=SIGNAL, sender=dispatcher.Any
