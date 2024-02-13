@@ -12,7 +12,8 @@ from twitchAPI.type import AuthScope, ChatEvent
 
 USER_SCOPE = [AuthScope.CHAT_READ]
 
-SIGNAL = "CHAT_SIGNAL"
+CHAT_SIGNAL = "CHAT_SIGNAL"
+STREAMER_SIGNAL = "STREAMER_SIGNAL"
 
 STREAMERS = [
     "jynxzi",
@@ -81,35 +82,32 @@ def get_month():
 
 
 class TwitchAPIConnection:
-    instance = None
-    chat = None
+    def __init__(self):
+        self.session = None
+        self.chat = None
 
-    def __del__(self):
-        self.cleanup()
+    async def __aenter__(self):
+        return self
 
-    @classmethod
-    async def init_connection(self):
-        if self.instance is None:
-            session = await Twitch(
-                secrets.get_twitch_api_client_id(), secrets.get_twitch_api_secret()
-            )
-            auth = UserAuthenticator(session, USER_SCOPE)
-            token, refresh_token = await auth.authenticate()
-            await session.set_user_authentication(token, USER_SCOPE, refresh_token)
-            self.instance = session
-        return self.instance
+    async def __aexit__(self, *excinfo):
+        if self.chat:
+            self.chat.stop()
+        if self.session:
+            await self.session.close()
+
+    async def authenticate(self):
+        self.session = await Twitch(
+            secrets.get_twitch_api_client_id(), secrets.get_twitch_api_secret()
+        )
+        auth = UserAuthenticator(self.session, USER_SCOPE)
+        token, refresh_token = await auth.authenticate()
+        await self.session.set_user_authentication(token, USER_SCOPE, refresh_token)
 
     async def join_chat(self):
-        self.chat = await Chat(self.instance)
+        self.chat = await Chat(self.session)
         self.chat.register_event(ChatEvent.READY, self.on_ready)
         self.chat.register_event(ChatEvent.MESSAGE, self.on_message)
         self.chat.start()
-
-    def cleanup(self):
-        if self.chat:
-            self.chat.stop()
-        if self.instance:
-            self.instance.close()
 
     async def on_ready(self, ready_event: EventData):
         print("Bot is ready for work, joining channels")
@@ -118,7 +116,7 @@ class TwitchAPIConnection:
 
     async def on_message(self, msg: ChatMessage):
         dispatcher.send(
-            signal=SIGNAL,
+            signal=CHAT_SIGNAL,
             sender="TWITCH",
             broadcaster_id=int(msg.room.room_id),
             month=int(get_month()),
@@ -126,3 +124,13 @@ class TwitchAPIConnection:
             message_id=uuid.UUID(msg.id),
             message=serialize_message(msg),
         )
+
+    async def get_all_streamers(self):
+        n = 100
+        streamers = self.session.get_streams(first=n, stream_type="live")
+        ids = tuple([(s.user_id,) async for s in streamers])
+
+        for i in range(0, len(ids), n):
+            dispatcher.send(
+                signal=STREAMER_SIGNAL, sender="TWITCH", streamer_ids=ids[i : i + n]
+            )

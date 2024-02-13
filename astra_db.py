@@ -18,6 +18,15 @@ class DatabaseConnection:
             self.handle_chat_message, signal=SIGNAL, sender=dispatcher.Any
         )
 
+    def __del__(self):
+        self.session.shutdown()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *members):
+        self.session.shutdown()
+
     def get_session(self, keyspace):
         auth_provider = PlainTextAuthProvider(
             secrets.get_chat_db_client_id(), secrets.get_chat_db_secret()
