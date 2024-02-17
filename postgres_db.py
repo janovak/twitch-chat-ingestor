@@ -20,6 +20,7 @@ class NeonConnection:
                 "INSERT INTO streamer_ids (id) VALUES (%s) ON CONFLICT DO NOTHING",
                 streamer_ids,
             )
+            self.session.commit()
 
     def fetch_streamers(self):
         with self.session.cursor() as cursor:

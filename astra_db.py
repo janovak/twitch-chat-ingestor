@@ -1,8 +1,10 @@
+import time
+from datetime import datetime
+
 import auth.secrets as secrets
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
-from cassandra.query import BatchStatement
-from cassandra.query import BatchType
+from cassandra.query import BatchStatement, BatchType, tuple_factory
 from pydispatch import dispatcher
 
 SIGNAL = "CHAT_SIGNAL"
@@ -55,7 +57,40 @@ class DatabaseConnection:
         self.batch.clear()
         self.batch_counter = 0
 
-    def handle_chat_message(
-        self, broadcaster_id, month, timestamp, message_id, message
-    ):
-        self.prepare(broadcaster_id, month, timestamp, message_id, message)
+    def get_month(self, timestamp):
+        return time.strftime("%Y%m", time.gmtime(timestamp))
+
+    def handle_chat_message(self, broadcaster_id, timestamp, message_id, message):
+        self.prepare(
+            broadcaster_id,
+            int(self.get_month(timestamp)),
+            timestamp,
+            message_id,
+            message,
+        )
+
+    def get_chats(self, broadcaster_id, start, end):
+        self.session.row_factory = tuple_factory
+
+        unix_start = (
+            datetime.fromisoformat(start.replace("Z", "+00:00")).timestamp() * 1000
+        )
+        unix_end = datetime.fromisoformat(end.replace("Z", "+00:00")).timestamp() * 1000
+
+        statement = self.session.prepare(
+            """
+            SELECT message FROM twitch_chat_by_broadcaster_and_timestamp
+            WHERE broadcaster_id=? AND year_month=? AND timestamp>=? AND timestamp<=?
+            """,
+        )
+        # TODO: need to handle timestamps that span multiple months
+        rows = self.session.execute(
+            statement,
+            (
+                int(broadcaster_id),
+                int(self.get_month(unix_start / 1000)),
+                int(unix_start),
+                int(unix_end),
+            ),
+        )
+        return rows

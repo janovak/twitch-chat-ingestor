@@ -1,7 +1,6 @@
 import asyncio
 import json
 import uuid
-from datetime import datetime
 
 import auth.secrets as secrets
 from pydispatch import dispatcher
@@ -77,10 +76,6 @@ def serialize_message(msg: ChatMessage):
     return json.dumps(message)
 
 
-def get_month():
-    return datetime.utcnow().strftime("%Y%m")
-
-
 class TwitchAPIConnection:
     def __init__(self):
         self.session = None
@@ -119,7 +114,6 @@ class TwitchAPIConnection:
             signal=CHAT_SIGNAL,
             sender="TWITCH",
             broadcaster_id=int(msg.room.room_id),
-            month=int(get_month()),
             timestamp=msg.sent_timestamp,
             message_id=uuid.UUID(msg.id),
             message=serialize_message(msg),
