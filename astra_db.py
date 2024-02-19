@@ -69,18 +69,19 @@ class DatabaseConnection:
             message,
         )
 
-    def get_chats(self, broadcaster_id, start, end):
+    def get_chats(self, broadcaster_id, start, end, after_timestamp, limit):
         self.session.row_factory = tuple_factory
 
-        unix_start = (
-            datetime.fromisoformat(start.replace("Z", "+00:00")).timestamp() * 1000
-        )
-        unix_end = datetime.fromisoformat(end.replace("Z", "+00:00")).timestamp() * 1000
+        start_epoch = datetime.fromisoformat(start.replace("Z", "+00:00")).timestamp()
+        end_epoch = datetime.fromisoformat(end.replace("Z", "+00:00")).timestamp()
+
+        start_epoch = max(start_epoch, int(after_timestamp) / 1000)
 
         statement = self.session.prepare(
             """
-            SELECT message FROM twitch_chat_by_broadcaster_and_timestamp
+            SELECT broadcaster_id, year_month, timestamp, message_id, message FROM twitch_chat_by_broadcaster_and_timestamp
             WHERE broadcaster_id=? AND year_month=? AND timestamp>=? AND timestamp<=?
+            LIMIT ?
             """,
         )
         # TODO: need to handle timestamps that span multiple months
@@ -88,9 +89,10 @@ class DatabaseConnection:
             statement,
             (
                 int(broadcaster_id),
-                int(self.get_month(unix_start / 1000)),
-                int(unix_start),
-                int(unix_end),
+                int(self.get_month(start_epoch)),
+                int(start_epoch * 1000),
+                int(end_epoch * 1000),
+                limit + 1,
             ),
         )
-        return rows
+        return list(rows)
