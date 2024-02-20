@@ -72,10 +72,13 @@ class DatabaseConnection:
     def get_chats(self, broadcaster_id, start, end, after_timestamp, limit):
         self.session.row_factory = tuple_factory
 
-        start_epoch = datetime.fromisoformat(start.replace("Z", "+00:00")).timestamp()
-        end_epoch = datetime.fromisoformat(end.replace("Z", "+00:00")).timestamp()
+        start_epoch = start.timestamp()
+        year_month = int(self.get_month(start_epoch))
 
-        start_epoch = max(start_epoch, int(after_timestamp) / 1000)
+        start_epoch_milliseconds = int(start_epoch * 1000)
+        end_epoch_milliseconds = int(end.timestamp() * 1000)
+
+        start_epoch = max(start_epoch_milliseconds, after_timestamp)
 
         statement = self.session.prepare(
             """
@@ -88,10 +91,10 @@ class DatabaseConnection:
         rows = self.session.execute(
             statement,
             (
-                int(broadcaster_id),
-                int(self.get_month(start_epoch)),
-                int(start_epoch * 1000),
-                int(end_epoch * 1000),
+                broadcaster_id,
+                year_month,
+                start_epoch_milliseconds,
+                end_epoch_milliseconds,
                 limit + 1,
             ),
         )

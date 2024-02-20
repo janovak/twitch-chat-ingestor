@@ -1,6 +1,10 @@
+from datetime import datetime
+from typing import Optional
+
 import astra_db
 import codec
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify
+from flask_parameter_validation import Query, Route, ValidateParameters
 
 app = Flask(__name__)
 
@@ -15,23 +19,33 @@ def get_primary_key(cursor):
     return tuple(primary_key_string.split())
 
 
-@app.route("/streamdata/api/v1.0/<broadcaster_id>/chat", methods=["GET"])
-def get_chats(broadcaster_id):
-    after = request.args.get("after")
-    timestamp = 0
+@app.route("/v1.0/<int:broadcaster_id>/chat", methods=["GET"])
+@ValidateParameters()
+def get_chats(
+    broadcaster_id: int = Route(),
+    start: datetime = Query(),
+    end: datetime = Query(),
+    after: Optional[str] = Query(),
+    limit: Optional[int] = Query(min_int=1, max_int=100, default=20),
+):
+    after_timestamp = 0
     if after is not None:
-        # need to validate the other components of the cursor/primary key
         cursor_elements = get_primary_key(after)
-        timestamp = cursor_elements[2]
-
-    start = request.args.get("start")
-    end = request.args.get("end")
-
-    limit = int(request.args.get("limit", 20))
-    limit = min(limit, 100)
+        if (
+            not cursor_elements[0].isdigit()
+            or int(cursor_elements[0]) != broadcaster_id
+        ):
+            error = {"Invalid cursor": "Cursor doesn't match the broadcaster Id"}
+            return error, 400
+        # check if the year_month aligns with the timestamp
+        after_timestamp = int(cursor_elements[2])
 
     astra_session = astra_db.DatabaseConnection("chat_data")
-    row_list = astra_session.get_chats(broadcaster_id, start, end, timestamp, limit)
+    row_list = astra_session.get_chats(
+        broadcaster_id, start, end, after_timestamp, limit
+    )
+
+    # need to filter out UUIDs that preceed the UUID in after for the exact same timestamp
 
     if len(row_list) <= limit:
         return jsonify({"messages": row_list})
