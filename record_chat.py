@@ -9,6 +9,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 async def run():
     neon_session = postgres_db.NeonConnection()
+    neon_session.initialize_bloom_filter()
     print("Total streamer count", len(neon_session.fetch_streamers()))
 
     astra_session = astra_db.DatabaseConnection("chat_data")

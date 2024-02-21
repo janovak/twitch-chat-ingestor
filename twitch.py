@@ -122,7 +122,7 @@ class TwitchAPIConnection:
     async def get_all_streamers(self):
         n = 100
         streamers = self.session.get_streams(first=n, stream_type="live")
-        ids = tuple([(s.user_id,) async for s in streamers])
+        ids = tuple([(int(s.user_id),) async for s in streamers])
 
         for i in range(0, len(ids), n):
             dispatcher.send(
