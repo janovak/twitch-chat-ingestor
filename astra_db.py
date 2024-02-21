@@ -1,5 +1,4 @@
 import time
-from datetime import datetime
 
 import auth.secrets as secrets
 from cassandra.auth import PlainTextAuthProvider

@@ -14,15 +14,15 @@ class NeonConnection:
         self.session.close()
 
     def insert_streamers(self, streamer_ids):
-        print("Inserting ", len(streamer_ids), " rows")
+        print("Inserting", len(streamer_ids), "rows")
         with self.session.cursor() as cursor:
             cursor.executemany(
-                "INSERT INTO streamer_ids (id) VALUES (%s) ON CONFLICT DO NOTHING",
+                "INSERT INTO Streamer (streamer_id) VALUES (%s) ON CONFLICT DO NOTHING",
                 streamer_ids,
             )
             self.session.commit()
 
     def fetch_streamers(self):
         with self.session.cursor() as cursor:
-            cursor.execute("SELECT * FROM streamer_ids")
+            cursor.execute("SELECT * FROM Streamer")
             return cursor.fetchall()
