@@ -51,7 +51,7 @@ class DatabaseConnection:
         self.batch_counter += 1
 
     def insert_batch(self):
-        print("Inserting a batch of {} rows".format(self.batch_counter))
+        print("Inserting {} messages".format(self.batch_counter))
         self.session.execute(self.batch)
         self.batch.clear()
         self.batch_counter = 0

@@ -45,7 +45,7 @@ def get_chats(
         broadcaster_id, start, end, after_timestamp, limit
     )
 
-    # need to filter out UUIDs that preceed the UUID in 'after' for the exact same timestamp
+    # TOOD: need to filter out UUIDs that preceed the UUID in 'after' for the exact same timestamp
 
     if len(row_list) <= limit:
         return jsonify({"messages": row_list})
