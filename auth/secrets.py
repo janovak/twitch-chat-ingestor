@@ -7,6 +7,7 @@ TWITCH_API_BASE_PATH = os.path.join(SECRETS_BASE_PATH, "twitch-api")
 ASTRA_DB_BASE_PATH = os.path.join(SECRETS_BASE_PATH, "astra-db")
 REDIS_BASE_PATH = os.path.join(SECRETS_BASE_PATH, "redis")
 NEON_BASE_PATH = os.path.join(SECRETS_BASE_PATH, "neon")
+RABBITMQ_BASE_PATH = os.path.join(SECRETS_BASE_PATH, "rabbitmq")
 
 
 def load_secrets(filepath):
@@ -54,6 +55,11 @@ def load_neon_secrets():
     return load_secrets(os.path.join(NEON_BASE_PATH, "neon-secret.json"))
 
 
+@load_secrets_once
+def load_cloudamqp_secrets():
+    return load_secrets(os.path.join(RABBITMQ_BASE_PATH, "cloudamqp-secret.json"))
+
+
 def get_twitch_api_client_id():
     return load_twitch_api_secrets()["clientId"]
 
@@ -88,3 +94,7 @@ def get_redis_host_password():
 
 def get_neon_url():
     return load_neon_secrets()["neonURL"]
+
+
+def get_cloudamqp_url():
+    return load_cloudamqp_secrets()["cloudAMQPURL"]

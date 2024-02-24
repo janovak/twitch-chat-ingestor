@@ -3,6 +3,7 @@ import json
 import uuid
 
 import auth.secrets as secrets
+import pika
 from pydispatch import dispatcher
 from twitchAPI.chat import Chat, ChatMessage, EventData
 from twitchAPI.oauth import UserAuthenticator
@@ -12,7 +13,6 @@ from twitchAPI.type import AuthScope, ChatEvent
 USER_SCOPE = [AuthScope.CHAT_READ]
 
 CHAT_SIGNAL = "CHAT_SIGNAL"
-STREAMER_SIGNAL = "STREAMER_SIGNAL"
 
 STREAMERS = [
     "jynxzi",
@@ -81,6 +81,15 @@ class TwitchAPIConnection:
         self.session = None
         self.chat = None
 
+        self.connection = pika.BlockingConnection(
+            pika.URLParameters(secrets.get_cloudamqp_url())
+        )
+        self.channel = self.connection.channel()
+        self.channel.queue_declare(queue="live_broadcasters_queue", durable=True)
+
+    def __del__(self):
+        self.connection.close()
+
     async def __aenter__(self):
         return self
 
@@ -120,11 +129,27 @@ class TwitchAPIConnection:
         )
 
     async def get_all_streamers(self):
-        n = 100
-        streamers = self.session.get_streams(first=n, stream_type="live")
-        ids = tuple([(int(s.user_id),) async for s in streamers])
+        batch_size = 100
+        streamers = self.session.get_streams(first=batch_size, stream_type="live")
 
-        for i in range(0, len(ids), n):
-            dispatcher.send(
-                signal=STREAMER_SIGNAL, sender="TWITCH", streamer_ids=ids[i : i + n]
+        async def publish_batch(ids):
+            message = json.dumps(ids)
+            self.channel.basic_publish(
+                exchange="",
+                routing_key="live_broadcasters_queue",
+                body=message,
+                properties=pika.BasicProperties(
+                    delivery_mode=pika.DeliveryMode.Persistent
+                ),
             )
+
+        ids = []
+        async for s in streamers:
+            ids.append(int(s.user_id))
+            if len(ids) == batch_size:
+                await publish_batch(ids)
+                ids.clear()
+
+        # Publish any remaining streamers if the total count is not a multiple of batch_size
+        if ids:
+            await publish_batch(ids)
