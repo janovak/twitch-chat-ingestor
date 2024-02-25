@@ -4,15 +4,12 @@ import uuid
 
 import auth.secrets as secrets
 import pika
-from pydispatch import dispatcher
 from twitchAPI.chat import Chat, ChatMessage, EventData
 from twitchAPI.oauth import UserAuthenticator
 from twitchAPI.twitch import Twitch
 from twitchAPI.type import AuthScope, ChatEvent
 
 USER_SCOPE = [AuthScope.CHAT_READ]
-
-CHAT_SIGNAL = "CHAT_SIGNAL"
 
 STREAMERS = [
     "jynxzi",
@@ -86,6 +83,7 @@ class TwitchAPIConnection:
         )
         self.channel = self.connection.channel()
         self.channel.queue_declare(queue="live_broadcasters_queue", durable=True)
+        self.channel.queue_declare(queue="chat_processing_queue", durable=True)
 
     def __del__(self):
         self.connection.close()
@@ -119,13 +117,23 @@ class TwitchAPIConnection:
         await asyncio.gather(*tasks)
 
     async def on_message(self, msg: ChatMessage):
-        dispatcher.send(
-            signal=CHAT_SIGNAL,
-            sender="TWITCH",
-            broadcaster_id=int(msg.room.room_id),
-            timestamp=msg.sent_timestamp,
-            message_id=uuid.UUID(msg.id),
-            message=serialize_message(msg),
+        message_fields = {
+            "broadcaster_id": int(msg.room.room_id),
+            "timestamp": msg.sent_timestamp,
+            "message_id": str(uuid.UUID(msg.id)),
+            "message": serialize_message(msg),
+        }
+        message = json.dumps(message_fields)
+
+        print(
+            f"Message {message_fields['message_id']} posted in chat room {message_fields['broadcaster_id']} at {message_fields['timestamp']}"
+        )
+
+        self.channel.basic_publish(
+            exchange="",
+            routing_key="chat_processing_queue",
+            body=message,
+            properties=pika.BasicProperties(delivery_mode=pika.DeliveryMode.Persistent),
         )
 
     async def get_all_streamers(self):

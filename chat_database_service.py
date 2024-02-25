@@ -1,23 +1,25 @@
+import json
 import time
+import uuid
 
 import auth.secrets as secrets
+import pika
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
 from cassandra.query import BatchStatement, BatchType, tuple_factory
-from pydispatch import dispatcher
-
-SIGNAL = "CHAT_SIGNAL"
 
 
 class DatabaseConnection:
     def __init__(self, keyspace):
         self.session = self.get_session(keyspace)
-        # not thread safe at the moment
         self.batch = BatchStatement(batch_type=BatchType.UNLOGGED)
         self.batch_counter = 0
-        dispatcher.connect(
-            self.handle_chat_message, signal=SIGNAL, sender=dispatcher.Any
+        self.connection = pika.BlockingConnection(
+            pika.URLParameters(secrets.get_cloudamqp_url())
         )
+        self.channel = self.connection.channel()
+        self.channel.queue_declare(queue="chat_processing_queue", durable=True)
 
     def __del__(self):
         self.session.shutdown()
@@ -38,7 +40,17 @@ class DatabaseConnection:
         session = cluster.connect(keyspace)
         return session
 
-    def prepare(self, broadcaster_id, month, timestamp, message_id, message):
+    def start_consuming_chats(self):
+        self.channel.basic_qos(prefetch_count=1)
+        self.channel.basic_consume(
+            queue="chat_processing_queue", on_message_callback=self.handle_chat_message
+        )
+        print(f"Start consuming chats from queue")
+        self.channel.start_consuming()
+
+    def prepare_chat_for_insertion(
+        self, broadcaster_id, month, timestamp, message_id, message
+    ):
         statement = self.session.prepare(
             """
             INSERT INTO twitch_chat_by_broadcaster_and_timestamp (broadcaster_id, year_month, timestamp, message_id, message)
@@ -50,8 +62,8 @@ class DatabaseConnection:
         )
         self.batch_counter += 1
 
-    def insert_batch(self):
-        print("Inserting {} messages".format(self.batch_counter))
+    def insert_chats_prepared_for_insertion(self):
+        print(f"Inserting {self.batch_counter} messages")
         self.session.execute(self.batch)
         self.batch.clear()
         self.batch_counter = 0
@@ -59,14 +71,22 @@ class DatabaseConnection:
     def get_month(self, timestamp):
         return time.strftime("%Y%m", time.gmtime(timestamp))
 
-    def handle_chat_message(self, broadcaster_id, timestamp, message_id, message):
-        self.prepare(
-            broadcaster_id,
-            int(self.get_month(timestamp)),
-            timestamp,
-            message_id,
-            message,
+    def handle_chat_message(self, ch, method, properties, body):
+        message_fields = json.loads(body.decode())
+
+        print(
+            f"Preparing message {message_fields['message_id']} posted in chat room {message_fields['broadcaster_id']} at {message_fields['timestamp']} for insertion"
         )
+
+        self.prepare_chat_for_insertion(
+            message_fields["broadcaster_id"],
+            int(self.get_month(message_fields["timestamp"])),
+            message_fields["timestamp"],
+            uuid.UUID(message_fields["message_id"]),
+            message_fields["message"],
+        )
+
+        ch.basic_ack(delivery_tag=method.delivery_tag)
 
     def get_chats(self, broadcaster_id, start, end, after_timestamp, limit):
         self.session.row_factory = tuple_factory
@@ -98,3 +118,19 @@ class DatabaseConnection:
             ),
         )
         return list(rows)
+
+
+def main():
+    session = DatabaseConnection("chat_data")
+
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(
+        session.insert_chats_prepared_for_insertion, "interval", seconds=10
+    )
+    scheduler.start()
+
+    session.start_consuming_chats()
+
+
+if __name__ == "__main__":
+    main()

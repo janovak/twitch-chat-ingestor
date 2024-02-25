@@ -1,5 +1,3 @@
-import asyncio
-import concurrent.futures
 import json
 
 import auth.secrets as secrets
@@ -46,8 +44,8 @@ class DatabaseConnection:
         self.channel.basic_consume(
             queue="live_broadcasters_queue", on_message_callback=self.insert_streamers
         )
-        self.channel.start_consuming()
         print(f"Start consuming live broadcasters from queue")
+        self.channel.start_consuming()
 
     def fetch_streamers(self):
         with self.session.cursor() as cursor:
@@ -61,14 +59,11 @@ class DatabaseConnection:
         print(f"Loading {len(all_known_streamers)} streamer Ids into the bloom filter")
 
 
-async def main():
+def main():
     session = DatabaseConnection()
     session.initialize_bloom_filter()
     session.start_consuming_live_broadcasters()
 
-    loop = asyncio.get_running_loop()
-    with concurrent.futures.ThreadPoolExecutor() as pool:
-        await loop.run_in_executor(pool, input, "Press enter to exit\n")
 
-
-asyncio.get_event_loop().run_until_complete(main())
+if __name__ == "__main__":
+    main()
