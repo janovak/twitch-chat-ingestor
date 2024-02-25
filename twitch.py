@@ -129,6 +129,8 @@ class TwitchAPIConnection:
         )
 
     async def get_all_streamers(self):
+        print("Retreiving all currently live streamers")
+
         batch_size = 100
         streamers = self.session.get_streams(first=batch_size, stream_type="live")
 
@@ -143,13 +145,21 @@ class TwitchAPIConnection:
                 ),
             )
 
+        counter = 0
         ids = []
+        tasks = []
         async for s in streamers:
             ids.append(int(s.user_id))
             if len(ids) == batch_size:
-                await publish_batch(ids)
+                counter += batch_size
+                tasks.append(asyncio.create_task(publish_batch(ids)))
                 ids.clear()
 
         # Publish any remaining streamers if the total count is not a multiple of batch_size
         if ids:
-            await publish_batch(ids)
+            counter += len(ids)
+            tasks.append(asyncio.create_task(publish_batch(ids)))
+
+        asyncio.gather(*tasks)
+
+        print(f"Published {counter} Ids in batches of {batch_size}")
