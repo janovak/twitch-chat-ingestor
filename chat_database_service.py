@@ -4,17 +4,14 @@ import uuid
 
 import auth.secrets as secrets
 import pika
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
-from cassandra.query import BatchStatement, BatchType, tuple_factory
+from cassandra.query import tuple_factory
 
 
 class DatabaseConnection:
     def __init__(self, keyspace):
         self.session = self.get_session(keyspace)
-        self.batch = BatchStatement(batch_type=BatchType.UNLOGGED)
-        self.batch_counter = 0
         self.connection = pika.BlockingConnection(
             pika.URLParameters(secrets.get_cloudamqp_url())
         )
@@ -48,26 +45,6 @@ class DatabaseConnection:
         print(f"Start consuming chats from queue")
         self.channel.start_consuming()
 
-    def prepare_chat_for_insertion(
-        self, broadcaster_id, month, timestamp, message_id, message
-    ):
-        statement = self.session.prepare(
-            """
-            INSERT INTO twitch_chat_by_broadcaster_and_timestamp (broadcaster_id, year_month, timestamp, message_id, message)
-            VALUES (?, ?, ?, ?, ?)
-            """
-        )
-        self.batch.add(
-            statement, (broadcaster_id, month, timestamp, message_id, message)
-        )
-        self.batch_counter += 1
-
-    def insert_chats_prepared_for_insertion(self):
-        print(f"Inserting {self.batch_counter} messages")
-        self.session.execute(self.batch)
-        self.batch.clear()
-        self.batch_counter = 0
-
     def get_month(self, timestamp):
         return time.strftime("%Y%m", time.gmtime(timestamp))
 
@@ -75,15 +52,25 @@ class DatabaseConnection:
         message_fields = json.loads(body.decode())
 
         print(
-            f"Preparing message {message_fields['message_id']} posted in chat room {message_fields['broadcaster_id']} at {message_fields['timestamp']} for insertion"
+            f"Inserting message {message_fields['message_id']} posted in chat room {message_fields['broadcaster_id']} at {message_fields['timestamp']}"
         )
 
-        self.prepare_chat_for_insertion(
-            message_fields["broadcaster_id"],
-            int(self.get_month(message_fields["timestamp"])),
-            message_fields["timestamp"],
-            uuid.UUID(message_fields["message_id"]),
-            message_fields["message"],
+        statement = self.session.prepare(
+            """
+            INSERT INTO twitch_chat_by_broadcaster_and_timestamp (broadcaster_id, year_month, timestamp, message_id, message)
+            VALUES (?, ?, ?, ?, ?)
+            """
+        )
+
+        self.session.execute(
+            statement,
+            (
+                message_fields["broadcaster_id"],
+                int(self.get_month(message_fields["timestamp"])),
+                message_fields["timestamp"],
+                uuid.UUID(message_fields["message_id"]),
+                message_fields["message"],
+            ),
         )
 
         ch.basic_ack(delivery_tag=method.delivery_tag)
@@ -122,13 +109,6 @@ class DatabaseConnection:
 
 def main():
     session = DatabaseConnection("chat_data")
-
-    scheduler = AsyncIOScheduler()
-    scheduler.add_job(
-        session.insert_chats_prepared_for_insertion, "interval", seconds=10
-    )
-    scheduler.start()
-
     session.start_consuming_chats()
 
 
