@@ -88,7 +88,7 @@ class DatabaseConnection:
 
         statement = self.session.prepare(
             """
-            SELECT broadcaster_id, year_month, timestamp, message_id, message FROM twitch_chat_by_broadcaster_and_timestamp
+            SELECT broadcaster_id, timestamp, message_id, message FROM twitch_chat_by_broadcaster_and_timestamp
             WHERE broadcaster_id=? AND year_month=? AND timestamp>=? AND timestamp<=?
             LIMIT ?
             """,

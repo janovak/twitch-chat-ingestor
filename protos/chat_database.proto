@@ -1,9 +1,9 @@
 syntax = "proto3";
 
 option java_multiple_files = true;
-option java_package = "io.grpc.examples.restapi";
-option java_outer_classname = "RestApiProto";
-option objc_class_prefix = "rapi";
+option java_package = "twitchapiextended.chat.database";
+option java_outer_classname = "ChatDatabaseProto";
+option objc_class_prefix = "cdb";
 
 package chatdatabase;
 

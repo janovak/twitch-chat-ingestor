@@ -1,18 +1,17 @@
-import json
 from datetime import datetime
 from typing import Optional
 
 import codec
 import grpc
-import rest_api_pb2
-import rest_api_pb2_grpc
+import grpc_gen.chat_database.chat_database_pb2 as chat_database_pb2
+import grpc_gen.chat_database.chat_database_pb2 as chat_database_pb2_grpc
 from flask import Flask, jsonify
 from flask_parameter_validation import Query, Route, ValidateParameters
 
 app = Flask(__name__)
 
 channel = grpc.insecure_channel("localhost:50051")
-stub = rest_api_pb2_grpc.ChatDatabaseStub(channel)
+stub = chat_database_pb2_grpc.ChatDatabaseStub(channel)
 
 
 def serialize_chat(chat):
@@ -56,7 +55,7 @@ def get_chats(
         after_timestamp = int(cursor_elements[2])
 
     response = stub.GetChats(
-        rest_api_pb2.GetChatsRequest(
+        chat_database_pb2.GetChatsRequest(
             broadcaster_id=broadcaster_id,
             start=int(start.timestamp() * 1000),
             end=int(end.timestamp() * 1000),

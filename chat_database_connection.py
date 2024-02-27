@@ -1,5 +1,4 @@
 import time
-import uuid
 
 import auth.secrets as secrets
 from cassandra.auth import PlainTextAuthProvider

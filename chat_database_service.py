@@ -1,12 +1,12 @@
 from concurrent import futures
 
 import grpc
-import rest_api_pb2
-import rest_api_pb2_grpc
+import grpc_gen.chat_database.chat_database_pb2 as chat_database_pb2
+import grpc_gen.chat_database.chat_database_pb2 as chat_database_pb2_grpc
 import chat_database_connection
 
 
-class ChatDatabaseServicer(rest_api_pb2_grpc.ChatDatabaseServicer):
+class ChatDatabaseServicer(chat_database_pb2_grpc.ChatDatabaseServicer):
     def __init__(self):
         self.database = chat_database_connection.DatabaseConnection("chat_data")
 
@@ -20,7 +20,7 @@ class ChatDatabaseServicer(rest_api_pb2_grpc.ChatDatabaseServicer):
 
         self.database.insert_chats(rows)
 
-        return rest_api_pb2.InsertChatsRequest()
+        return chat_database_pb2.InsertChatsRequest()
 
     def GetChats(self, request, context):
         list_of_chats = self.database.get_chats(
@@ -31,10 +31,10 @@ class ChatDatabaseServicer(rest_api_pb2_grpc.ChatDatabaseServicer):
             request.limit,
         )
 
-        response = rest_api_pb2.GetChatsResponse()
+        response = chat_database_pb2.GetChatsResponse()
         for broadcaster_id, year_month, timestamp, message_id, message in list_of_chats:
             response.chats.append(
-                rest_api_pb2.Chat(
+                chat_database_pb2.Chat(
                     broadcaster_id=broadcaster_id,
                     year_month=year_month,
                     timestamp=timestamp,
@@ -48,7 +48,9 @@ class ChatDatabaseServicer(rest_api_pb2_grpc.ChatDatabaseServicer):
 
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    rest_api_pb2_grpc.add_ChatDatabaseServicer_to_server(ChatDatabaseServicer(), server)
+    chat_database_pb2_grpc.add_ChatDatabaseServicer_to_server(
+        ChatDatabaseServicer(), server
+    )
     server.add_insecure_port("[::]:50051")
     server.start()
     server.wait_for_termination()
