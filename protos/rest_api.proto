@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "io.grpc.examples.restapi";
+option java_outer_classname = "RestApiProto";
+option objc_class_prefix = "rapi";
+
+package chatdatabase;
+
+service ChatDatabase {
+  rpc GetChats(GetChatsRequest) returns (GetChatsResponse) {}
+  rpc InsertChats(InsertChatsRequest) returns (InsertChatsResponse) {}
+}
+
+message Chat {
+    uint32 broadcaster_id = 1;
+    uint32 year_month = 2;
+    uint64 timestamp = 3;
+    string message_id = 4;
+    string message = 5;
+}
+
+message GetChatsRequest {
+    uint32 broadcaster_id = 1;
+    uint64 start = 2;
+    uint64 end = 3;
+    uint64 after_timestamp = 4;
+    uint32 limit = 5;
+}
+
+message GetChatsResponse {
+    repeated Chat chats = 1;
+}
+
+message InsertChatsRequest {
+    repeated Chat chats = 1;
+}
+
+message InsertChatsResponse {
+    bool success = 1;
+}

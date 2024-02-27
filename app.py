@@ -1,12 +1,27 @@
+import json
 from datetime import datetime
 from typing import Optional
 
-import astra_db
 import codec
+import grpc
+import rest_api_pb2
+import rest_api_pb2_grpc
 from flask import Flask, jsonify
 from flask_parameter_validation import Query, Route, ValidateParameters
 
 app = Flask(__name__)
+
+channel = grpc.insecure_channel("localhost:50051")
+stub = rest_api_pb2_grpc.ChatDatabaseStub(channel)
+
+
+def serialize_chat(chat):
+    return {
+        "broadcaster_id": chat.broadcaster_id,
+        "timestamp": chat.timestamp,
+        "message_id": chat.message_id,
+        "message": chat.message,
+    }
 
 
 def get_cursor(primary_key_elements):
@@ -37,22 +52,41 @@ def get_chats(
         ):
             error = {"Invalid cursor": "Cursor doesn't match the broadcaster Id"}
             return error, 400
-        # check if the year_month aligns with the timestamp
+        # TODO: check if the year_month aligns with the timestamp
         after_timestamp = int(cursor_elements[2])
 
-    astra_session = astra_db.DatabaseConnection("chat_data")
-    row_list = astra_session.get_chats(
-        broadcaster_id, start, end, after_timestamp, limit
+    response = stub.GetChats(
+        rest_api_pb2.GetChatsRequest(
+            broadcaster_id=broadcaster_id,
+            start=int(start.timestamp() * 1000),
+            end=int(end.timestamp() * 1000),
+            after_timestamp=after_timestamp,
+            limit=limit,
+        )
     )
 
-    # TOOD: need to filter out UUIDs that preceed the UUID in 'after' for the exact same timestamp
+    row_list = list(response.chats)
+
+    # TODO: need to filter out UUIDs that preceed the UUID in 'after' for the exact same timestamp
 
     if len(row_list) <= limit:
-        return jsonify({"messages": row_list})
-    else:
-        primary_key_elements = row_list[-1][:4]
         return jsonify(
-            {"messages": row_list[:-1], "cursor": get_cursor(primary_key_elements)}
+            {"messages": [serialize_chat(message) for message in row_list[:-1]]}
+        )
+    else:
+        next_element = row_list[-1]
+        primary_key_elements = (
+            next_element.broadcaster_id,
+            next_element.year_month,
+            next_element.timestamp,
+            next_element.message_id,
+        )
+
+        return jsonify(
+            {
+                "messages": [serialize_chat(message) for message in row_list[:-1]],
+                "cursor": get_cursor(primary_key_elements),
+            }
         )
 
 
