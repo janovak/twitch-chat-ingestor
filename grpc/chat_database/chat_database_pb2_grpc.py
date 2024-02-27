@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import rest_api_pb2 as rest__api__pb2
+from grpc.chat_database import chat_database_pb2 as grpc_dot_chat__database_dot_chat__database__pb2
 
 
 class ChatDatabaseStub(object):
@@ -16,13 +16,13 @@ class ChatDatabaseStub(object):
         """
         self.GetChats = channel.unary_unary(
                 '/chatdatabase.ChatDatabase/GetChats',
-                request_serializer=rest__api__pb2.GetChatsRequest.SerializeToString,
-                response_deserializer=rest__api__pb2.GetChatsResponse.FromString,
+                request_serializer=grpc_dot_chat__database_dot_chat__database__pb2.GetChatsRequest.SerializeToString,
+                response_deserializer=grpc_dot_chat__database_dot_chat__database__pb2.GetChatsResponse.FromString,
                 )
         self.InsertChats = channel.unary_unary(
                 '/chatdatabase.ChatDatabase/InsertChats',
-                request_serializer=rest__api__pb2.InsertChatsRequest.SerializeToString,
-                response_deserializer=rest__api__pb2.InsertChatsResponse.FromString,
+                request_serializer=grpc_dot_chat__database_dot_chat__database__pb2.InsertChatsRequest.SerializeToString,
+                response_deserializer=grpc_dot_chat__database_dot_chat__database__pb2.InsertChatsResponse.FromString,
                 )
 
 
@@ -46,13 +46,13 @@ def add_ChatDatabaseServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'GetChats': grpc.unary_unary_rpc_method_handler(
                     servicer.GetChats,
-                    request_deserializer=rest__api__pb2.GetChatsRequest.FromString,
-                    response_serializer=rest__api__pb2.GetChatsResponse.SerializeToString,
+                    request_deserializer=grpc_dot_chat__database_dot_chat__database__pb2.GetChatsRequest.FromString,
+                    response_serializer=grpc_dot_chat__database_dot_chat__database__pb2.GetChatsResponse.SerializeToString,
             ),
             'InsertChats': grpc.unary_unary_rpc_method_handler(
                     servicer.InsertChats,
-                    request_deserializer=rest__api__pb2.InsertChatsRequest.FromString,
-                    response_serializer=rest__api__pb2.InsertChatsResponse.SerializeToString,
+                    request_deserializer=grpc_dot_chat__database_dot_chat__database__pb2.InsertChatsRequest.FromString,
+                    response_serializer=grpc_dot_chat__database_dot_chat__database__pb2.InsertChatsResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -76,8 +76,8 @@ class ChatDatabase(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/chatdatabase.ChatDatabase/GetChats',
-            rest__api__pb2.GetChatsRequest.SerializeToString,
-            rest__api__pb2.GetChatsResponse.FromString,
+            grpc_dot_chat__database_dot_chat__database__pb2.GetChatsRequest.SerializeToString,
+            grpc_dot_chat__database_dot_chat__database__pb2.GetChatsResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -93,7 +93,7 @@ class ChatDatabase(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/chatdatabase.ChatDatabase/InsertChats',
-            rest__api__pb2.InsertChatsRequest.SerializeToString,
-            rest__api__pb2.InsertChatsResponse.FromString,
+            grpc_dot_chat__database_dot_chat__database__pb2.InsertChatsRequest.SerializeToString,
+            grpc_dot_chat__database_dot_chat__database__pb2.InsertChatsResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
