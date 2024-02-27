@@ -3,8 +3,8 @@ from typing import Optional
 
 import codec
 import grpc
-import grpc_gen.chat_database.chat_database_pb2 as chat_database_pb2
-import grpc_gen.chat_database.chat_database_pb2 as chat_database_pb2_grpc
+import gen.grpc.chat_database.chat_database_pb2 as chat_database_pb2
+import gen.grpc.chat_database.chat_database_pb2 as chat_database_pb2_grpc
 from flask import Flask, jsonify
 from flask_parameter_validation import Query, Route, ValidateParameters
 
