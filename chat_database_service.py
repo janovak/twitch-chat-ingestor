@@ -2,7 +2,7 @@ from concurrent import futures
 
 import grpc
 import gen.grpc.chat_database.chat_database_pb2 as chat_database_pb2
-import gen.grpc.chat_database.chat_database_pb2 as chat_database_pb2_grpc
+import gen.grpc.chat_database.chat_database_pb2_grpc as chat_database_pb2_grpc
 import chat_database_connection
 
 
