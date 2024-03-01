@@ -2,11 +2,12 @@ from datetime import datetime
 from typing import Optional
 
 import codec
-import grpc
 import gen.grpc.chat_database.chat_database_pb2 as chat_database_pb2
 import gen.grpc.chat_database.chat_database_pb2_grpc as chat_database_pb2_grpc
+import grpc
 from flask import Flask, jsonify
 from flask_parameter_validation import Query, Route, ValidateParameters
+from helpers import get_month
 
 app = Flask(__name__)
 
@@ -76,7 +77,7 @@ def get_chats(
         next_element = row_list[-1]
         primary_key_elements = (
             next_element.broadcaster_id,
-            next_element.year_month,
+            get_month(next_element.timestamp),
             next_element.timestamp,
             next_element.message_id,
         )

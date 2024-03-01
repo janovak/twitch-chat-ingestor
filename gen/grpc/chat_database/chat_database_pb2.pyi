@@ -6,20 +6,6 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Map
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class Chat(_message.Message):
-    __slots__ = ("broadcaster_id", "year_month", "timestamp", "message_id", "message")
-    BROADCASTER_ID_FIELD_NUMBER: _ClassVar[int]
-    YEAR_MONTH_FIELD_NUMBER: _ClassVar[int]
-    TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
-    MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
-    MESSAGE_FIELD_NUMBER: _ClassVar[int]
-    broadcaster_id: int
-    year_month: int
-    timestamp: int
-    message_id: str
-    message: str
-    def __init__(self, broadcaster_id: _Optional[int] = ..., year_month: _Optional[int] = ..., timestamp: _Optional[int] = ..., message_id: _Optional[str] = ..., message: _Optional[str] = ...) -> None: ...
-
-class RawChat(_message.Message):
     __slots__ = ("broadcaster_id", "timestamp", "message_id", "message")
     BROADCASTER_ID_FIELD_NUMBER: _ClassVar[int]
     TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
@@ -54,8 +40,8 @@ class GetChatsResponse(_message.Message):
 class InsertChatsRequest(_message.Message):
     __slots__ = ("chats",)
     CHATS_FIELD_NUMBER: _ClassVar[int]
-    chats: _containers.RepeatedCompositeFieldContainer[RawChat]
-    def __init__(self, chats: _Optional[_Iterable[_Union[RawChat, _Mapping]]] = ...) -> None: ...
+    chats: _containers.RepeatedCompositeFieldContainer[Chat]
+    def __init__(self, chats: _Optional[_Iterable[_Union[Chat, _Mapping]]] = ...) -> None: ...
 
 class InsertChatsResponse(_message.Message):
     __slots__ = ("success",)

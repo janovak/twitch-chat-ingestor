@@ -14,17 +14,9 @@ service ChatDatabase {
 
 message Chat {
     uint32 broadcaster_id = 1;
-    uint32 year_month = 2;
-    uint64 timestamp = 3;
-    string message_id = 4;
-    string message = 5;
-}
-
-message RawChat {
-    uint32 broadcaster_id = 1;
-    uint64 timestamp = 3;
-    string message_id = 4;
-    string message = 5;
+    uint64 timestamp = 2;
+    string message_id = 3;
+    string message = 4;
 }
 
 message GetChatsRequest {
@@ -40,7 +32,7 @@ message GetChatsResponse {
 }
 
 message InsertChatsRequest {
-    repeated RawChat chats = 1;
+    repeated Chat chats = 1;
 }
 
 message InsertChatsResponse {

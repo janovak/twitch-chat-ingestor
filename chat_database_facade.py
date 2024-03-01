@@ -32,11 +32,10 @@ class ChatDatabaseServicer(chat_database_pb2_grpc.ChatDatabaseServicer):
         )
 
         response = chat_database_pb2.GetChatsResponse()
-        for broadcaster_id, year_month, timestamp, message_id, message in list_of_chats:
+        for broadcaster_id, timestamp, message_id, message in list_of_chats:
             response.chats.append(
                 chat_database_pb2.Chat(
                     broadcaster_id=broadcaster_id,
-                    year_month=year_month,
                     timestamp=timestamp,
                     message_id=str(message_id),
                     message=message,

@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n*gen/grpc/chat_database/chat_database.proto\x12\x0c\x63hatdatabase\"j\n\x04\x43hat\x12\x16\n\x0e\x62roadcaster_id\x18\x01 \x01(\r\x12\x12\n\nyear_month\x18\x02 \x01(\r\x12\x11\n\ttimestamp\x18\x03 \x01(\x04\x12\x12\n\nmessage_id\x18\x04 \x01(\t\x12\x0f\n\x07message\x18\x05 \x01(\t\"Y\n\x07RawChat\x12\x16\n\x0e\x62roadcaster_id\x18\x01 \x01(\r\x12\x11\n\ttimestamp\x18\x03 \x01(\x04\x12\x12\n\nmessage_id\x18\x04 \x01(\t\x12\x0f\n\x07message\x18\x05 \x01(\t\"m\n\x0fGetChatsRequest\x12\x16\n\x0e\x62roadcaster_id\x18\x01 \x01(\r\x12\r\n\x05start\x18\x02 \x01(\x04\x12\x0b\n\x03\x65nd\x18\x03 \x01(\x04\x12\x17\n\x0f\x61\x66ter_timestamp\x18\x04 \x01(\x04\x12\r\n\x05limit\x18\x05 \x01(\r\"5\n\x10GetChatsResponse\x12!\n\x05\x63hats\x18\x01 \x03(\x0b\x32\x12.chatdatabase.Chat\":\n\x12InsertChatsRequest\x12$\n\x05\x63hats\x18\x01 \x03(\x0b\x32\x15.chatdatabase.RawChat\"&\n\x13InsertChatsResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x32\xb1\x01\n\x0c\x43hatDatabase\x12K\n\x08GetChats\x12\x1d.chatdatabase.GetChatsRequest\x1a\x1e.chatdatabase.GetChatsResponse\"\x00\x12T\n\x0bInsertChats\x12 .chatdatabase.InsertChatsRequest\x1a!.chatdatabase.InsertChatsResponse\"\x00\x42<\n\x1ftwitchapiextended.chat.databaseB\x11\x43hatDatabaseProtoP\x01\xa2\x02\x03\x63\x64\x62\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n*gen/grpc/chat_database/chat_database.proto\x12\x0c\x63hatdatabase\"V\n\x04\x43hat\x12\x16\n\x0e\x62roadcaster_id\x18\x01 \x01(\r\x12\x11\n\ttimestamp\x18\x02 \x01(\x04\x12\x12\n\nmessage_id\x18\x03 \x01(\t\x12\x0f\n\x07message\x18\x04 \x01(\t\"m\n\x0fGetChatsRequest\x12\x16\n\x0e\x62roadcaster_id\x18\x01 \x01(\r\x12\r\n\x05start\x18\x02 \x01(\x04\x12\x0b\n\x03\x65nd\x18\x03 \x01(\x04\x12\x17\n\x0f\x61\x66ter_timestamp\x18\x04 \x01(\x04\x12\r\n\x05limit\x18\x05 \x01(\r\"5\n\x10GetChatsResponse\x12!\n\x05\x63hats\x18\x01 \x03(\x0b\x32\x12.chatdatabase.Chat\"7\n\x12InsertChatsRequest\x12!\n\x05\x63hats\x18\x01 \x03(\x0b\x32\x12.chatdatabase.Chat\"&\n\x13InsertChatsResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x32\xb1\x01\n\x0c\x43hatDatabase\x12K\n\x08GetChats\x12\x1d.chatdatabase.GetChatsRequest\x1a\x1e.chatdatabase.GetChatsResponse\"\x00\x12T\n\x0bInsertChats\x12 .chatdatabase.InsertChatsRequest\x1a!.chatdatabase.InsertChatsResponse\"\x00\x42<\n\x1ftwitchapiextended.chat.databaseB\x11\x43hatDatabaseProtoP\x01\xa2\x02\x03\x63\x64\x62\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -23,17 +23,15 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _globals['DESCRIPTOR']._options = None
   _globals['DESCRIPTOR']._serialized_options = b'\n\037twitchapiextended.chat.databaseB\021ChatDatabaseProtoP\001\242\002\003cdb'
   _globals['_CHAT']._serialized_start=60
-  _globals['_CHAT']._serialized_end=166
-  _globals['_RAWCHAT']._serialized_start=168
-  _globals['_RAWCHAT']._serialized_end=257
-  _globals['_GETCHATSREQUEST']._serialized_start=259
-  _globals['_GETCHATSREQUEST']._serialized_end=368
-  _globals['_GETCHATSRESPONSE']._serialized_start=370
-  _globals['_GETCHATSRESPONSE']._serialized_end=423
-  _globals['_INSERTCHATSREQUEST']._serialized_start=425
-  _globals['_INSERTCHATSREQUEST']._serialized_end=483
-  _globals['_INSERTCHATSRESPONSE']._serialized_start=485
-  _globals['_INSERTCHATSRESPONSE']._serialized_end=523
-  _globals['_CHATDATABASE']._serialized_start=526
-  _globals['_CHATDATABASE']._serialized_end=703
+  _globals['_CHAT']._serialized_end=146
+  _globals['_GETCHATSREQUEST']._serialized_start=148
+  _globals['_GETCHATSREQUEST']._serialized_end=257
+  _globals['_GETCHATSRESPONSE']._serialized_start=259
+  _globals['_GETCHATSRESPONSE']._serialized_end=312
+  _globals['_INSERTCHATSREQUEST']._serialized_start=314
+  _globals['_INSERTCHATSREQUEST']._serialized_end=369
+  _globals['_INSERTCHATSRESPONSE']._serialized_start=371
+  _globals['_INSERTCHATSRESPONSE']._serialized_end=409
+  _globals['_CHATDATABASE']._serialized_start=412
+  _globals['_CHATDATABASE']._serialized_end=589
 # @@protoc_insertion_point(module_scope)

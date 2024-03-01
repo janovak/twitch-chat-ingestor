@@ -1,29 +1,8 @@
-import datetime
-
 import auth.secrets as secrets
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
 from cassandra.query import tuple_factory
-
-
-def get_month(timestamp):
-    return int(datetime.utcfromtimestamp(timestamp).strftime("%Y%m"))
-
-
-def get_next_month(year_month):
-    year = year_month // 100
-    month = year_month % 100
-
-    # Create a datetime object for the given year and month
-    current_date = datetime(year, month, 1)
-
-    # Calculate the start of the next month
-    if month == 12:
-        next_month = current_date.replace(year=year + 1, month=1)
-    else:
-        next_month = current_date.replace(month=month + 1)
-
-    return int(next_month.strftime("%Y%m"))
+from helpers import get_month, get_next_month
 
 
 class DatabaseConnection:
@@ -70,7 +49,7 @@ class DatabaseConnection:
 
         statement = self.session.prepare(
             """
-            SELECT broadcaster_id, year_month, timestamp, message_id, message FROM twitch_chat_by_broadcaster_and_timestamp
+            SELECT broadcaster_id, timestamp, message_id, message FROM twitch_chat_by_broadcaster_and_timestamp
             WHERE broadcaster_id=? AND year_month=? AND timestamp>=? AND timestamp<=?
             LIMIT ?
             """,
