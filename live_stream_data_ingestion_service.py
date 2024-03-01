@@ -10,7 +10,7 @@ async def main():
     await session.authenticate()
 
     scheduler = AsyncIOScheduler()
-    scheduler.add_job(session.get_all_streamers, "interval", hours=1)
+    scheduler.add_job(session.get_all_streamers, "interval", minutes=3)
     scheduler.start()
 
     loop = asyncio.get_running_loop()

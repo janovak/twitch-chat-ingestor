@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "twitchapiextended.streamer.database";
+option java_outer_classname = "StreamerDatabaseProto";
+option objc_class_prefix = "sdb";
+
+package streamerdatabase;
+
+service StreamerDatabase {
+  rpc InsertStreamers(InsertStreamersRequest) returns (InsertStreamersResponse) {}
+}
+
+message Streamer {
+    uint32 streamer_id = 1;
+}
+
+message InsertStreamersRequest {
+    repeated Streamer streamers = 1;
+}
+
+message InsertStreamersResponse {
+    bool success = 1;
+}
