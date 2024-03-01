@@ -36,15 +36,3 @@ class GetChatsResponse(_message.Message):
     CHATS_FIELD_NUMBER: _ClassVar[int]
     chats: _containers.RepeatedCompositeFieldContainer[Chat]
     def __init__(self, chats: _Optional[_Iterable[_Union[Chat, _Mapping]]] = ...) -> None: ...
-
-class InsertChatsRequest(_message.Message):
-    __slots__ = ("chats",)
-    CHATS_FIELD_NUMBER: _ClassVar[int]
-    chats: _containers.RepeatedCompositeFieldContainer[Chat]
-    def __init__(self, chats: _Optional[_Iterable[_Union[Chat, _Mapping]]] = ...) -> None: ...
-
-class InsertChatsResponse(_message.Message):
-    __slots__ = ("success",)
-    SUCCESS_FIELD_NUMBER: _ClassVar[int]
-    success: bool
-    def __init__(self, success: bool = ...) -> None: ...

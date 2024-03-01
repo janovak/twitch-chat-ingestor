@@ -1,17 +1,14 @@
 import json
 
 import auth.secrets as secrets
-import gen.grpc.chat_database.chat_database_pb2 as chat_database_pb2
-import gen.grpc.chat_database.chat_database_pb2_grpc as chat_database_pb2_grpc
-import grpc
+import chat_database_connection
 import pika
-
-channel = grpc.insecure_channel("localhost:50051")
-stub = chat_database_pb2_grpc.ChatDatabaseStub(channel)
 
 
 class ChatRecorder:
     def __init__(self):
+        self.database = chat_database_connection.DatabaseConnection("chat_data")
+
         self.connection = pika.BlockingConnection(
             pika.URLParameters(secrets.get_cloudamqp_url())
         )
@@ -36,14 +33,11 @@ class ChatRecorder:
             f"Inserting message {message_fields['message_id']} posted in chat room {message_fields['broadcaster_id']} at {message_fields['timestamp']}"
         )
 
-        # TODO: Make InsertChats return value useful
-        stub.InsertChats(
-            chat_database_pb2.InsertChatsRequest(
-                broadcaster_id=message_fields["broadcaster_id"],
-                timestamp=message_fields["timestamp"],
-                message_id=message_fields["message_id"],
-                message=message_fields["message"],
-            )
+        self.database.insert_chats(
+            broadcaster_id=message_fields["broadcaster_id"],
+            timestamp=message_fields["timestamp"],
+            message_id=message_fields["message_id"],
+            message=message_fields["message"],
         )
 
         ch.basic_ack(delivery_tag=method.delivery_tag)

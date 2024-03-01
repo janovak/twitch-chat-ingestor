@@ -36,7 +36,7 @@ class DatabaseConnection:
                 broadcaster_id,
                 get_month(timestamp),
                 timestamp,
-                message_id,  # uuid.UUID(message_id),
+                message_id,
                 message,
             ),
         )

@@ -19,23 +19,12 @@ class ChatDatabaseStub(object):
                 request_serializer=gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetChatsRequest.SerializeToString,
                 response_deserializer=gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetChatsResponse.FromString,
                 )
-        self.InsertChats = channel.unary_unary(
-                '/chatdatabase.ChatDatabase/InsertChats',
-                request_serializer=gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.InsertChatsRequest.SerializeToString,
-                response_deserializer=gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.InsertChatsResponse.FromString,
-                )
 
 
 class ChatDatabaseServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def GetChats(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def InsertChats(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -48,11 +37,6 @@ def add_ChatDatabaseServicer_to_server(servicer, server):
                     servicer.GetChats,
                     request_deserializer=gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetChatsRequest.FromString,
                     response_serializer=gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetChatsResponse.SerializeToString,
-            ),
-            'InsertChats': grpc.unary_unary_rpc_method_handler(
-                    servicer.InsertChats,
-                    request_deserializer=gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.InsertChatsRequest.FromString,
-                    response_serializer=gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.InsertChatsResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -78,22 +62,5 @@ class ChatDatabase(object):
         return grpc.experimental.unary_unary(request, target, '/chatdatabase.ChatDatabase/GetChats',
             gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetChatsRequest.SerializeToString,
             gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetChatsResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
-
-    @staticmethod
-    def InsertChats(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/chatdatabase.ChatDatabase/InsertChats',
-            gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.InsertChatsRequest.SerializeToString,
-            gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.InsertChatsResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

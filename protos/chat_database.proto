@@ -9,7 +9,6 @@ package chatdatabase;
 
 service ChatDatabase {
   rpc GetChats(GetChatsRequest) returns (GetChatsResponse) {}
-  rpc InsertChats(InsertChatsRequest) returns (InsertChatsResponse) {}
 }
 
 message Chat {
@@ -29,12 +28,4 @@ message GetChatsRequest {
 
 message GetChatsResponse {
     repeated Chat chats = 1;
-}
-
-message InsertChatsRequest {
-    repeated Chat chats = 1;
-}
-
-message InsertChatsResponse {
-    bool success = 1;
 }

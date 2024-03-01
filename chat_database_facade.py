@@ -10,18 +10,6 @@ class ChatDatabaseServicer(chat_database_pb2_grpc.ChatDatabaseServicer):
     def __init__(self):
         self.database = chat_database_connection.DatabaseConnection("chat_data")
 
-    def InsertChats(self, request, context):
-        chats = request.chats
-
-        rows = tuple(
-            (chat.broadcaster_id, chat.timestamp, chat.message_id, chat.message)
-            for chat in chats
-        )
-
-        self.database.insert_chats(rows)
-
-        return chat_database_pb2.InsertChatsRequest()
-
     def GetChats(self, request, context):
         list_of_chats = self.database.get_chats(
             request.broadcaster_id,
