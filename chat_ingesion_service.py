@@ -5,7 +5,7 @@ import chat_database_connection
 import pika
 
 
-class ChatRecorder:
+class ChatIngester:
     def __init__(self):
         self.database = chat_database_connection.DatabaseConnection("chat_data")
 
