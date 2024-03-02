@@ -46,7 +46,7 @@ class ChatIngester:
 
 
 def main():
-    session = ChatRecorder()
+    session = ChatIngester()
     session.start_consuming_chats()
 
 

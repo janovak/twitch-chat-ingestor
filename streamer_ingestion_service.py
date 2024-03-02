@@ -1,7 +1,8 @@
 import json
-import pybloomfilter
+
 import auth.secrets as secrets
 import pika
+import pybloomfilter
 import streamer_database_connection
 
 
