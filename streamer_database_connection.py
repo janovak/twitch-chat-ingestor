@@ -17,3 +17,8 @@ class DatabaseConnection:
                 streamer_ids,
             )
             self.session.commit()
+
+    def get_streamers(self):
+        with self.session.cursor() as cursor:
+            cursor.execute("SELECT streamer_id FROM Streamer")
+            return cursor.fetchall()

@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n2gen/grpc/streamer_database/streamer_database.proto\x12\x10streamerdatabase\"\x1f\n\x08Streamer\x12\x13\n\x0bstreamer_id\x18\x01 \x01(\r\"G\n\x16InsertStreamersRequest\x12-\n\tstreamers\x18\x01 \x03(\x0b\x32\x1a.streamerdatabase.Streamer\"*\n\x17InsertStreamersResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x32|\n\x10StreamerDatabase\x12h\n\x0fInsertStreamers\x12(.streamerdatabase.InsertStreamersRequest\x1a).streamerdatabase.InsertStreamersResponse\"\x00\x42\x44\n#twitchapiextended.streamer.databaseB\x15StreamerDatabaseProtoP\x01\xa2\x02\x03sdbb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n2gen/grpc/streamer_database/streamer_database.proto\x12\x10streamerdatabase\"\x15\n\x13GetStreamersRequest\"\x1f\n\x08Streamer\x12\x13\n\x0bstreamer_id\x18\x01 \x01(\r2i\n\x10StreamerDatabase\x12U\n\x0cGetStreamers\x12%.streamerdatabase.GetStreamersRequest\x1a\x1a.streamerdatabase.Streamer\"\x00\x30\x01\x42\x44\n#twitchapiextended.streamer.databaseB\x15StreamerDatabaseProtoP\x01\xa2\x02\x03sdbb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -22,12 +22,10 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'gen.grpc.streamer_database.
 if _descriptor._USE_C_DESCRIPTORS == False:
   _globals['DESCRIPTOR']._options = None
   _globals['DESCRIPTOR']._serialized_options = b'\n#twitchapiextended.streamer.databaseB\025StreamerDatabaseProtoP\001\242\002\003sdb'
-  _globals['_STREAMER']._serialized_start=72
-  _globals['_STREAMER']._serialized_end=103
-  _globals['_INSERTSTREAMERSREQUEST']._serialized_start=105
-  _globals['_INSERTSTREAMERSREQUEST']._serialized_end=176
-  _globals['_INSERTSTREAMERSRESPONSE']._serialized_start=178
-  _globals['_INSERTSTREAMERSRESPONSE']._serialized_end=220
-  _globals['_STREAMERDATABASE']._serialized_start=222
-  _globals['_STREAMERDATABASE']._serialized_end=346
+  _globals['_GETSTREAMERSREQUEST']._serialized_start=72
+  _globals['_GETSTREAMERSREQUEST']._serialized_end=93
+  _globals['_STREAMER']._serialized_start=95
+  _globals['_STREAMER']._serialized_end=126
+  _globals['_STREAMERDATABASE']._serialized_start=128
+  _globals['_STREAMERDATABASE']._serialized_end=233
 # @@protoc_insertion_point(module_scope)

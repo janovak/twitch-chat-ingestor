@@ -136,7 +136,7 @@ class TwitchAPIConnection:
             properties=pika.BasicProperties(delivery_mode=pika.DeliveryMode.Persistent),
         )
 
-    async def get_all_streamers(self):
+    async def get_streamers(self):
         print("Retreiving all currently live streamers")
 
         batch_size = 100

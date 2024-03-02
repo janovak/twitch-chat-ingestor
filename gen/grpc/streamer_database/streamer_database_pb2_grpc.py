@@ -14,17 +14,17 @@ class StreamerDatabaseStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.InsertStreamers = channel.unary_unary(
-                '/streamerdatabase.StreamerDatabase/InsertStreamers',
-                request_serializer=gen_dot_grpc_dot_streamer__database_dot_streamer__database__pb2.InsertStreamersRequest.SerializeToString,
-                response_deserializer=gen_dot_grpc_dot_streamer__database_dot_streamer__database__pb2.InsertStreamersResponse.FromString,
+        self.GetStreamers = channel.unary_stream(
+                '/streamerdatabase.StreamerDatabase/GetStreamers',
+                request_serializer=gen_dot_grpc_dot_streamer__database_dot_streamer__database__pb2.GetStreamersRequest.SerializeToString,
+                response_deserializer=gen_dot_grpc_dot_streamer__database_dot_streamer__database__pb2.Streamer.FromString,
                 )
 
 
 class StreamerDatabaseServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def InsertStreamers(self, request, context):
+    def GetStreamers(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -33,10 +33,10 @@ class StreamerDatabaseServicer(object):
 
 def add_StreamerDatabaseServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'InsertStreamers': grpc.unary_unary_rpc_method_handler(
-                    servicer.InsertStreamers,
-                    request_deserializer=gen_dot_grpc_dot_streamer__database_dot_streamer__database__pb2.InsertStreamersRequest.FromString,
-                    response_serializer=gen_dot_grpc_dot_streamer__database_dot_streamer__database__pb2.InsertStreamersResponse.SerializeToString,
+            'GetStreamers': grpc.unary_stream_rpc_method_handler(
+                    servicer.GetStreamers,
+                    request_deserializer=gen_dot_grpc_dot_streamer__database_dot_streamer__database__pb2.GetStreamersRequest.FromString,
+                    response_serializer=gen_dot_grpc_dot_streamer__database_dot_streamer__database__pb2.Streamer.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -49,7 +49,7 @@ class StreamerDatabase(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def InsertStreamers(request,
+    def GetStreamers(request,
             target,
             options=(),
             channel_credentials=None,
@@ -59,8 +59,8 @@ class StreamerDatabase(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/streamerdatabase.StreamerDatabase/InsertStreamers',
-            gen_dot_grpc_dot_streamer__database_dot_streamer__database__pb2.InsertStreamersRequest.SerializeToString,
-            gen_dot_grpc_dot_streamer__database_dot_streamer__database__pb2.InsertStreamersResponse.FromString,
+        return grpc.experimental.unary_stream(request, target, '/streamerdatabase.StreamerDatabase/GetStreamers',
+            gen_dot_grpc_dot_streamer__database_dot_streamer__database__pb2.GetStreamersRequest.SerializeToString,
+            gen_dot_grpc_dot_streamer__database_dot_streamer__database__pb2.Streamer.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

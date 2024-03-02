@@ -8,17 +8,11 @@ option objc_class_prefix = "sdb";
 package streamerdatabase;
 
 service StreamerDatabase {
-  rpc InsertStreamers(InsertStreamersRequest) returns (InsertStreamersResponse) {}
+  rpc GetStreamers(GetStreamersRequest) returns (stream Streamer) {}
 }
+
+message GetStreamersRequest {}
 
 message Streamer {
     uint32 streamer_id = 1;
-}
-
-message InsertStreamersRequest {
-    repeated Streamer streamers = 1;
-}
-
-message InsertStreamersResponse {
-    bool success = 1;
 }
