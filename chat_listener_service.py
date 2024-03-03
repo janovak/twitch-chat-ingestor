@@ -24,7 +24,16 @@ class ChatRoomJoiner:
             pika.URLParameters(secrets.get_cloudamqp_url())
         )
         self.channel = self.connection.channel()
-        self.channel.queue_declare(queue="live_broadcasters_queue", durable=True)
+
+        self.broadcaster_exchange = "broadcaster_fanout"
+        self.channel.exchange_declare(self.broadcaster_exchange, exchange_type="fanout")
+
+        self.broadcaster_queue = "join_broadcaster_chat_queue"
+        self.channel.queue_declare(queue=self.broadcaster_queue, durable=True)
+
+        self.channel.queue_bind(
+            exchange=self.broadcaster_exchange, queue=self.broadcaster_queue
+        )
 
         asyncio.gather(twitch_authentication)
 
@@ -34,7 +43,7 @@ class ChatRoomJoiner:
     def start_consuming_streamers(self):
         self.channel.basic_qos(prefetch_count=1)
         self.channel.basic_consume(
-            queue="live_broadcasters_queue",
+            queue=self.broadcaster_queue,
             on_message_callback=self.handle_live_streamers,
         )
         print(f"Start consuming streamers from queue")

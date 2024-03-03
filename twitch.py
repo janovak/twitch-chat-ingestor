@@ -82,7 +82,10 @@ class TwitchAPIConnection:
             pika.URLParameters(secrets.get_cloudamqp_url())
         )
         self.channel = self.connection.channel()
-        self.channel.queue_declare(queue="live_broadcasters_queue", durable=True)
+
+        self.broadcaster_exchange = "broadcaster_fanout"
+        self.channel.exchange_declare(self.broadcaster_exchange, exchange_type="fanout")
+
         self.channel.queue_declare(queue="chat_processing_queue", durable=True)
 
     def __del__(self):
@@ -145,8 +148,8 @@ class TwitchAPIConnection:
         async def publish_batch(ids):
             message = json.dumps(ids)
             self.channel.basic_publish(
-                exchange="",
-                routing_key="live_broadcasters_queue",
+                exchange=self.broadcaster_exchange,
+                routing_key="",
                 body=message,
                 properties=pika.BasicProperties(
                     delivery_mode=pika.DeliveryMode.Persistent
