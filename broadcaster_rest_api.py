@@ -7,7 +7,7 @@ import gen.grpc.chat_database.chat_database_pb2_grpc as chat_database_pb2_grpc
 import grpc
 from flask import Flask, jsonify
 from flask_parameter_validation import Query, Route, ValidateParameters
-from helpers import get_month
+from datetime_helpers import get_month
 
 app = Flask(__name__)
 

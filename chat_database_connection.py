@@ -2,7 +2,7 @@ import auth.secrets as secrets
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
 from cassandra.query import tuple_factory
-from helpers import get_month, get_next_month
+from datetime_helpers import get_month, get_next_month
 
 
 class DatabaseConnection:
@@ -44,8 +44,8 @@ class DatabaseConnection:
     def get_chats(self, broadcaster_id, start, end, after_timestamp, limit):
         self.session.row_factory = tuple_factory
 
-        year_month = get_month(start / 1000)
         start = max(start, after_timestamp)
+        year_month = get_month(start)
 
         statement = self.session.prepare(
             """
@@ -57,7 +57,7 @@ class DatabaseConnection:
 
         list_of_rows = []
         while len(list_of_rows) < limit + 1:
-            list_of_rows.append(
+            list_of_rows.extend(
                 list(
                     self.session.execute(
                         statement,

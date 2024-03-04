@@ -1,8 +1,9 @@
-import datetime
+from datetime import datetime
 
 
 def get_month(timestamp):
-    return int(datetime.utcfromtimestamp(timestamp).strftime("%Y%m"))
+    # timestamp is the number of milleseconds since the epoch
+    return int(datetime.utcfromtimestamp(timestamp // 1000).strftime("%Y%m"))
 
 
 def get_next_month(year_month):
