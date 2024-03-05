@@ -3,10 +3,11 @@ from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
 from cassandra.query import tuple_factory
 from datetime_helpers import get_month, get_next_month
+from typing import List, Tuple
 
 
 class DatabaseConnection:
-    def __init__(self, keyspace):
+    def __init__(self, keyspace: str):
         auth_provider = PlainTextAuthProvider(
             secrets.get_chat_db_client_id(), secrets.get_chat_db_secret()
         )
@@ -18,7 +19,9 @@ class DatabaseConnection:
     def __del__(self):
         self.session.shutdown()
 
-    def insert_chats(self, broadcaster_id, timestamp, message_id, message):
+    def insert_chats(
+        self, broadcaster_id: int, timestamp: int, message_id: str, message: str
+    ) -> None:
         statement = self.session.prepare(
             """
             INSERT INTO twitch_chat_by_broadcaster_and_timestamp (broadcaster_id, year_month, timestamp, message_id, message)
@@ -37,7 +40,14 @@ class DatabaseConnection:
             ),
         )
 
-    def get_chats(self, broadcaster_id, start, end, after_timestamp, limit):
+    def get_chats(
+        self,
+        broadcaster_id: int,
+        start: int,
+        end: int,
+        after_timestamp: int,
+        limit: int,
+    ) -> List[Tuple[int, int, str, str]]:
         self.session.row_factory = tuple_factory
 
         start = max(start, after_timestamp)

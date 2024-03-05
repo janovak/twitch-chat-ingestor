@@ -1,15 +1,15 @@
-base62_alphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+base62_alphabet: str = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 
-def base62_encode(string):
+def base62_encode(string: str) -> str:
     return encode(string, base62_alphabet)
 
 
-def base62_decode(string):
+def base62_decode(string: str) -> str:
     return decode(string, base62_alphabet)
 
 
-def encode(string, alphabet):
+def encode(string: str, alphabet: str) -> str:
     base = len(alphabet)
 
     # Convert each character to its ASCII value and then to base X representation
@@ -26,7 +26,7 @@ def encode(string, alphabet):
     return encoded_string
 
 
-def decode(encoded_string, alphabet):
+def decode(encoded_string: str, alphabet: str) -> str:
     base = len(alphabet)
 
     # Convert each base X character to its corresponding ASCII value
