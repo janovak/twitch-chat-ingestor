@@ -12,6 +12,8 @@ class ChatRoomJoiner:
     def __init__(self):
         self.twitch = twitch.TwitchAPIConnection()
 
+        self.online_streamers = set()
+
         self.cache = redis.Redis(
             host=secrets.get_redis_host_url(),
             port=secrets.get_redis_host_port(),
@@ -49,7 +51,9 @@ class ChatRoomJoiner:
         await self.twitch.initialize_chat()
 
     def streamer_went_offline_callback(self, message):
-        asyncio.run(self.twitch.leave_chat_room(message["data"].decode()))
+        streamer = message["data"].decode()
+        self.online_streamers.remove(streamer)
+        asyncio.run(self.twitch.leave_chat_room(streamer))
 
     def start_consuming_streamers(self):
         self.channel.basic_qos(prefetch_count=1)
@@ -72,18 +76,15 @@ class ChatRoomJoiner:
             ch.basic_ack(delivery_tag=method.delivery_tag)
             return
 
-        # TODO: if this process dies and gets restarted before the keys in the cache expire,
-        # it won't join the chat rooms it previously joined because they are still in the cache.
-        # Possible solutions are to check the cache when we start up or to keep a separate
-        # in-memory cache so it will be empty on start up.
         tasks = []
         for _, user_login in streamers:
-            if not self.cache.exists(user_login):
+            if user_login not in self.online_streamers:
                 tasks.append(
                     asyncio.create_task(self.twitch.join_chat_room(user_login))
                 )
                 self.cache.set(user_login, "")
-            self.cache.expire(user_login, 300)
+                self.online_streamers.add(user_login)
+            self.cache.expire(user_login, 15)
 
         ch.basic_ack(delivery_tag=method.delivery_tag)
 
