@@ -1,10 +1,12 @@
 import asyncio
 import json
+import sys
 import uuid
 
 import auth.secrets as secrets
 import pika
-from twitchAPI.chat import Chat, ChatMessage, EventData
+from twitchAPI.chat import Chat, ChatMessage
+from twitchAPI.helper import first
 from twitchAPI.oauth import UserAuthenticator
 from twitchAPI.twitch import Twitch
 from twitchAPI.type import AuthScope, ChatEvent
@@ -108,16 +110,14 @@ class TwitchAPIConnection:
         token, refresh_token = await auth.authenticate()
         await self.session.set_user_authentication(token, USER_SCOPE, refresh_token)
 
-    async def join_chat(self):
+    async def initialize_chat(self):
         self.chat = await Chat(self.session)
-        self.chat.register_event(ChatEvent.READY, self.on_ready)
         self.chat.register_event(ChatEvent.MESSAGE, self.on_message)
         self.chat.start()
 
-    async def on_ready(self, ready_event: EventData):
-        print("Bot is ready for work, joining channels")
-        tasks = [ready_event.chat.join_room(streamer) for streamer in STREAMERS]
-        await asyncio.gather(*tasks)
+    async def join_chat_room(self, streamer_name):
+        await self.chat.join_room(streamer_name)
+        print(f"Joined {streamer_name}'s chat room")
 
     async def on_message(self, msg: ChatMessage):
         message_fields = {
@@ -139,10 +139,16 @@ class TwitchAPIConnection:
             properties=pika.BasicProperties(delivery_mode=pika.DeliveryMode.Persistent),
         )
 
-    async def get_streamers(self):
-        print("Retreiving all currently live streamers")
+    async def get_all_streamers(self):
+        print("Retrieving all currently live streamers")
+        await self.get_streamers(sys.maxint)
 
-        batch_size = 100
+    async def get_top_streamers(self, n):
+        print(f"Retrieving top {n} currently live streamers")
+        await self.get_streamers(n)
+
+    async def get_streamers(self, n):
+        batch_size = min(n, 100)
         streamers = self.session.get_streams(first=batch_size, stream_type="live")
 
         async def publish_batch(ids):
@@ -157,20 +163,22 @@ class TwitchAPIConnection:
             )
 
         counter = 0
-        ids = []
+        streamer_list = []
         tasks = []
         async for s in streamers:
-            ids.append(int(s.user_id))
-            if len(ids) == batch_size:
-                counter += batch_size
-                tasks.append(asyncio.create_task(publish_batch(ids)))
-                ids.clear()
+            streamer_list.append((int(s.user_id), s.user_login))
+            counter += 1
+            if len(streamer_list) == batch_size:
+                tasks.append(asyncio.create_task(publish_batch(streamer_list.copy())))
+                streamer_list.clear()
+            if counter == n:
+                break
 
         # Publish any remaining streamers if the total count is not a multiple of batch_size
-        if ids:
-            counter += len(ids)
-            tasks.append(asyncio.create_task(publish_batch(ids)))
+        if streamer_list:
+            counter += len(streamer_list)
+            tasks.append(asyncio.create_task(publish_batch(streamer_list)))
 
-        asyncio.gather(*tasks)
+        await asyncio.gather(*tasks)
 
         print(f"Published {counter} Ids in batches of {batch_size}")

@@ -51,10 +51,10 @@ class StreamerIngester:
         print(f"Received {len(streamers)} live streamers")
 
         new_streamers = []
-        for streamer in streamers:
-            if streamer not in self.bloom_filter:
-                new_streamers.append(streamer)
-                self.bloom_filter.update(streamer)
+        for user_id, _ in streamers:
+            if user_id not in self.bloom_filter:
+                new_streamers.append((user_id,))
+                self.bloom_filter.add(user_id)
 
         print(f"Inserting {len(new_streamers)} new live streamers")
 

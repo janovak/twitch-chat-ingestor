@@ -11,7 +11,6 @@ import twitch
 class ChatRoomJoiner:
     def __init__(self):
         self.twitch = twitch.TwitchAPIConnection()
-        twitch_authentication = asyncio.create_task(self.twitch.authenticate())
 
         self.cache = redis.Redis(
             host=secrets.get_redis_host_url(),
@@ -35,10 +34,12 @@ class ChatRoomJoiner:
             exchange=self.broadcaster_exchange, queue=self.broadcaster_queue
         )
 
-        asyncio.gather(twitch_authentication)
-
     def __del__(self):
         self.connection.close()
+
+    async def initialize_twitch(self):
+        await self.twitch.authenticate()
+        await self.twitch.initialize_chat()
 
     def start_consuming_streamers(self):
         self.channel.basic_qos(prefetch_count=1)
@@ -50,31 +51,42 @@ class ChatRoomJoiner:
         self.channel.start_consuming()
 
     def handle_live_streamers(self, ch, method, properties, body):
+        asyncio.run(self.handle_live_streamers_async(ch, method, properties, body))
+
+    async def handle_live_streamers_async(self, ch, method, properties, body):
         streamers = json.loads(body.decode())
 
         print(f"Received {len(streamers)} live streamers")
 
+        if not streamers:
+            ch.basic_ack(delivery_tag=method.delivery_tag)
+            return
+
+        # TODO: if this process dies and gets restarted before the keys in the cache expire,
+        # it won't join the chat rooms it previously joined because they are still in the cache.
+        # Possible solutions are to check the cache when we start up or to keep a separate
+        # in-memory cache so it will be empty on start up.
         tasks = []
-        for streamer in streamers:
-            if not self.cache.sismember("live_broadcasters", streamer):
-                tasks.append(asyncio.create_task(self.twitch.join_chat()))
-
-        self.cache.sadd(*streamer)
-        for streamer in streamers:
-            self.cache.expire(streamer, 300)
-
-        asyncio.gather(*tasks)
+        for user_id, user_login in streamers:
+            if not self.cache.exists(user_id):
+                tasks.append(
+                    asyncio.create_task(self.twitch.join_chat_room(user_login))
+                )
+                self.cache.set(user_id, "")
+            self.cache.expire(user_id, 300)
 
         ch.basic_ack(delivery_tag=method.delivery_tag)
+
+        await asyncio.gather(*tasks)
 
 
 async def main():
     joiner = ChatRoomJoiner()
-    joiner.start_consuming_streamers()
+    await joiner.initialize_twitch()
 
     loop = asyncio.get_running_loop()
     with concurrent.futures.ThreadPoolExecutor() as pool:
-        await loop.run_in_executor(pool, input, "Press enter to exit\n")
+        await loop.run_in_executor(pool, joiner.start_consuming_streamers)
 
 
 asyncio.get_event_loop().run_until_complete(main())
