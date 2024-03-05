@@ -11,21 +11,6 @@ from twitchAPI.oauth import UserAuthenticator
 from twitchAPI.twitch import Twitch
 from twitchAPI.type import AuthScope, ChatEvent
 
-USER_SCOPE = [AuthScope.CHAT_READ]
-
-STREAMERS = [
-    "jynxzi",
-    "kaicenat",
-    "fps_shaka",
-    "caseoh_",
-    "ibai",
-    "gamesdonequick",
-    "illojuan",
-    "auronplay",
-    "gaules",
-    "xqc",
-]
-
 
 def serialize_message(msg: ChatMessage):
     room = {
@@ -106,9 +91,11 @@ class TwitchAPIConnection:
         self.session = await Twitch(
             secrets.get_twitch_api_client_id(), secrets.get_twitch_api_secret()
         )
-        auth = UserAuthenticator(self.session, USER_SCOPE)
+        auth = UserAuthenticator(self.session, [AuthScope.CHAT_READ])
         token, refresh_token = await auth.authenticate()
-        await self.session.set_user_authentication(token, USER_SCOPE, refresh_token)
+        await self.session.set_user_authentication(
+            token, [AuthScope.CHAT_READ], refresh_token
+        )
 
     async def initialize_chat(self):
         self.chat = await Chat(self.session)
