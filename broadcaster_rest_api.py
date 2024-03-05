@@ -5,17 +5,17 @@ import codec
 import gen.grpc.chat_database.chat_database_pb2 as chat_database_pb2
 import gen.grpc.chat_database.chat_database_pb2_grpc as chat_database_pb2_grpc
 import grpc
+from datetime_helpers import get_month
 from flask import Flask, jsonify
 from flask_parameter_validation import Query, Route, ValidateParameters
-from datetime_helpers import get_month
 
 app = Flask(__name__)
 
-channel = grpc.insecure_channel("localhost:50051")
-stub = chat_database_pb2_grpc.ChatDatabaseStub(channel)
+grpc_channel = grpc.insecure_channel("localhost:50051")
+grpc_client = chat_database_pb2_grpc.ChatDatabaseStub(grpc_channel)
 
 
-def serialize_chat(chat):
+def serialize_chat_database_row(chat):
     return {
         "broadcaster_id": chat.broadcaster_id,
         "timestamp": chat.timestamp,
@@ -55,7 +55,7 @@ def get_chats(
         # TODO: check if the year_month aligns with the timestamp
         after_timestamp = int(cursor_elements[2])
 
-    response = stub.GetChats(
+    response = grpc_client.GetChats(
         chat_database_pb2.GetChatsRequest(
             broadcaster_id=broadcaster_id,
             start=int(start.timestamp() * 1000),
@@ -71,7 +71,11 @@ def get_chats(
 
     if len(row_list) <= limit:
         return jsonify(
-            {"messages": [serialize_chat(message) for message in row_list[:-1]]}
+            {
+                "messages": [
+                    serialize_chat_database_row(message) for message in row_list[:-1]
+                ]
+            }
         )
     else:
         next_element = row_list[-1]
@@ -84,7 +88,9 @@ def get_chats(
 
         return jsonify(
             {
-                "messages": [serialize_chat(message) for message in row_list[:-1]],
+                "messages": [
+                    serialize_chat_database_row(message) for message in row_list[:-1]
+                ],
                 "cursor": get_cursor(primary_key_elements),
             }
         )

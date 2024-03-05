@@ -6,7 +6,6 @@ import uuid
 import auth.secrets as secrets
 import pika
 from twitchAPI.chat import Chat, ChatMessage
-from twitchAPI.helper import first
 from twitchAPI.oauth import UserAuthenticator
 from twitchAPI.twitch import Twitch
 from twitchAPI.type import AuthScope, ChatEvent
@@ -76,16 +75,23 @@ class TwitchAPIConnection:
         self.channel.queue_declare(queue="chat_processing_queue", durable=True)
 
     def __del__(self):
-        self.connection.close()
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, *excinfo):
         if self.chat:
             self.chat.stop()
+
         if self.session:
-            await self.session.close()
+            # Check if event loop is running
+            if asyncio.get_event_loop().is_running():
+                # Schedule cleanup task in the event loop
+                asyncio.ensure_future(self.cleanup())
+            else:
+                # If event loop is not running, run cleanup synchronously
+                asyncio.run(self.cleanup())
+
+        self.connection.close()
+
+    async def cleanup(self):
+        # Close the Twitch session
+        await self.session.close()
 
     async def authenticate(self):
         self.session = await Twitch(

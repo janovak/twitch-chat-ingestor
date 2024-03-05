@@ -7,20 +7,16 @@ from datetime_helpers import get_month, get_next_month
 
 class DatabaseConnection:
     def __init__(self, keyspace):
-        self.session = self.get_session(keyspace)
-
-    def __del__(self):
-        self.session.shutdown()
-
-    def get_session(self, keyspace):
         auth_provider = PlainTextAuthProvider(
             secrets.get_chat_db_client_id(), secrets.get_chat_db_secret()
         )
         cluster = Cluster(
             cloud=secrets.get_astra_db_cloud_config(), auth_provider=auth_provider
         )
-        session = cluster.connect(keyspace)
-        return session
+        self.session = cluster.connect(keyspace)
+
+    def __del__(self):
+        self.session.shutdown()
 
     def insert_chats(self, broadcaster_id, timestamp, message_id, message):
         statement = self.session.prepare(

@@ -35,11 +35,13 @@ class ChatRoomJoiner:
         )
 
     def __del__(self):
+        self.cache.close()
         self.connection.close()
 
     async def initialize_twitch(self):
-        await self.twitch.authenticate()
-        await self.twitch.initialize_chat()
+        auth = asyncio.create_task(self.twitch.authenticate())
+        chat = asyncio.create_task(self.twitch.initialize_chat())
+        await asyncio.gather(auth, chat)
 
     def start_consuming_streamers(self):
         self.channel.basic_qos(prefetch_count=1)
