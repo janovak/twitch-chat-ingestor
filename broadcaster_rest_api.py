@@ -45,15 +45,19 @@ def get_chats(
 ):
     after_timestamp = 0
     if after is not None:
-        cursor_elements = get_primary_key(after)
-        if (
-            not cursor_elements[0].isdigit()
-            or int(cursor_elements[0]) != broadcaster_id
-        ):
+        broadcaster_id, year_month, timestamp, _ = get_primary_key(after)
+
+        # Validate the broadcaster id
+        if not broadcaster_id.isdigit() or int(broadcaster_id) != broadcaster_id:
             error = {"Invalid cursor": "Cursor doesn't match the broadcaster Id"}
             return error, 400
-        # TODO: check if the year_month aligns with the timestamp
-        after_timestamp = int(cursor_elements[2])
+
+        # Validate the timestamp and month fields match
+        if get_month(timestamp) != year_month:
+            error = {"Invalid cursor": "Cursor doesn't match the timestamp"}
+            return error, 400
+
+        after_timestamp = int(timestamp)
 
     response = grpc_client.GetChats(
         chat_database_pb2.GetChatsRequest(
