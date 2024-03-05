@@ -10,9 +10,7 @@ class ChatDatabaseServicer(chat_database_pb2_grpc.ChatDatabaseServicer):
     def __init__(self):
         self.database = chat_database_connection.DatabaseConnection("chat_data")
 
-    def GetChats(
-        self, request: chat_database_pb2.GetChatsRequest, context: grpc.ServicerContext
-    ) -> chat_database_pb2.GetChatsResponse:
+    def GetChats(self, request, context):
         list_of_chats = self.database.get_chats(
             request.broadcaster_id,
             request.start,
@@ -35,7 +33,7 @@ class ChatDatabaseServicer(chat_database_pb2_grpc.ChatDatabaseServicer):
         return response
 
 
-def serve() -> None:
+def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     chat_database_pb2_grpc.add_ChatDatabaseServicer_to_server(
         ChatDatabaseServicer(), server

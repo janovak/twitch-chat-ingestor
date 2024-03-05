@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, List, Tuple
+from typing import Optional
 
 import codec
 import gen.grpc.chat_database.chat_database_pb2 as chat_database_pb2
@@ -15,7 +15,7 @@ grpc_channel = grpc.insecure_channel("localhost:50051")
 grpc_client = chat_database_pb2_grpc.ChatDatabaseStub(grpc_channel)
 
 
-def serialize_chat_database_row(chat: chat_database_pb2.Chat) -> dict:
+def serialize_chat_database_row(chat):
     return {
         "broadcaster_id": chat.broadcaster_id,
         "timestamp": chat.timestamp,
@@ -24,12 +24,12 @@ def serialize_chat_database_row(chat: chat_database_pb2.Chat) -> dict:
     }
 
 
-def get_cursor(primary_key_elements: Tuple[int, int, int, str]) -> str:
+def get_cursor(primary_key_elements):
     cursor = " ".join(str(item) for item in primary_key_elements)
     return codec.base62_encode(cursor)
 
 
-def get_primary_key(cursor: str) -> Tuple[int, int, int, str]:
+def get_primary_key(cursor):
     primary_key_string = codec.base62_decode(cursor)
     return tuple(primary_key_string.split())
 
@@ -42,7 +42,7 @@ def get_chats(
     end: datetime = Query(),
     after: Optional[str] = Query(),
     limit: Optional[int] = Query(min_int=1, max_int=100, default=20),
-) -> Tuple[dict, int]:
+):
     after_timestamp = 0
     if after is not None:
         cursor_elements = get_primary_key(after)
@@ -70,16 +70,12 @@ def get_chats(
     # TODO: need to filter out UUIDs that preceed the UUID in 'after' for the exact same timestamp
 
     if len(row_list) <= limit:
-        return (
-            jsonify(
-                {
-                    "messages": [
-                        serialize_chat_database_row(message)
-                        for message in row_list[:-1]
-                    ]
-                }
-            ),
-            200,
+        return jsonify(
+            {
+                "messages": [
+                    serialize_chat_database_row(message) for message in row_list[:-1]
+                ]
+            }
         )
     else:
         next_element = row_list[-1]
@@ -90,17 +86,13 @@ def get_chats(
             next_element.message_id,
         )
 
-        return (
-            jsonify(
-                {
-                    "messages": [
-                        serialize_chat_database_row(message)
-                        for message in row_list[:-1]
-                    ],
-                    "cursor": get_cursor(primary_key_elements),
-                }
-            ),
-            200,
+        return jsonify(
+            {
+                "messages": [
+                    serialize_chat_database_row(message) for message in row_list[:-1]
+                ],
+                "cursor": get_cursor(primary_key_elements),
+            }
         )
 
 

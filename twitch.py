@@ -11,7 +11,7 @@ from twitchAPI.twitch import Twitch
 from twitchAPI.type import AuthScope, ChatEvent
 
 
-def serialize_message(msg: ChatMessage) -> str:
+def serialize_message(msg: ChatMessage):
     room = {
         "name": msg.room.name,
         "is_emote_only": msg.room.is_emote_only,
@@ -61,18 +61,16 @@ def serialize_message(msg: ChatMessage) -> str:
 
 class TwitchAPIConnection:
     def __init__(self):
-        self.session: Twitch = None
-        self.chat: Chat = None
+        self.session = None
+        self.chat = None
 
-        self.connection: pika.BlockingConnection = pika.BlockingConnection(
+        self.connection = pika.BlockingConnection(
             pika.URLParameters(secrets.get_cloudamqp_url())
         )
-        self.channel: pika.channel.Channel = self.connection.channel()
+        self.channel = self.connection.channel()
 
-        self.broadcaster_exchange: str = "broadcaster_fanout"
-        self.channel.exchange_declare(
-            exchange=self.broadcaster_exchange, exchange_type="fanout"
-        )
+        self.broadcaster_exchange = "broadcaster_fanout"
+        self.channel.exchange_declare(self.broadcaster_exchange, exchange_type="fanout")
 
         self.channel.queue_declare(queue="chat_processing_queue", durable=True)
 
@@ -84,17 +82,18 @@ class TwitchAPIConnection:
             # Check if event loop is running
             if asyncio.get_event_loop().is_running():
                 # Schedule cleanup task in the event loop
-                asyncio.ensure_future(self.cleanup_async())
+                asyncio.ensure_future(self.cleanup())
             else:
                 # If event loop is not running, run cleanup synchronously
-                asyncio.run(self.cleanup_async())
+                asyncio.run(self.cleanup())
 
         self.connection.close()
 
-    async def cleanup_async(self) -> None:
+    async def cleanup(self):
+        # Close the Twitch session
         await self.session.close()
 
-    async def authenticate(self) -> None:
+    async def authenticate(self):
         self.session = await Twitch(
             secrets.get_twitch_api_client_id(), secrets.get_twitch_api_secret()
         )
@@ -104,16 +103,16 @@ class TwitchAPIConnection:
             token, [AuthScope.CHAT_READ], refresh_token
         )
 
-    async def initialize_chat(self) -> None:
+    async def initialize_chat(self):
         self.chat = await Chat(self.session)
         self.chat.register_event(ChatEvent.MESSAGE, self.on_message)
         self.chat.start()
 
-    async def join_chat_room(self, streamer_name: str) -> None:
+    async def join_chat_room(self, streamer_name):
         await self.chat.join_room(streamer_name)
         print(f"Joined {streamer_name}'s chat room")
 
-    async def on_message(self, msg: ChatMessage) -> None:
+    async def on_message(self, msg: ChatMessage):
         message_fields = {
             "broadcaster_id": int(msg.room.room_id),
             "timestamp": msg.sent_timestamp,
@@ -133,19 +132,19 @@ class TwitchAPIConnection:
             properties=pika.BasicProperties(delivery_mode=pika.DeliveryMode.Persistent),
         )
 
-    async def get_all_streamers(self) -> None:
+    async def get_all_streamers(self):
         print("Retrieving all currently live streamers")
         await self.get_streamers(sys.maxint)
 
-    async def get_top_streamers(self, n: int) -> None:
+    async def get_top_streamers(self, n):
         print(f"Retrieving top {n} currently live streamers")
         await self.get_streamers(n)
 
-    async def get_streamers(self, n: int) -> None:
-        batch_size: int = min(n, 100)
+    async def get_streamers(self, n):
+        batch_size = min(n, 100)
         streamers = self.session.get_streams(first=batch_size, stream_type="live")
 
-        async def publish_batch(ids: list) -> None:
+        async def publish_batch(ids):
             message = json.dumps(ids)
             self.channel.basic_publish(
                 exchange=self.broadcaster_exchange,
@@ -156,9 +155,9 @@ class TwitchAPIConnection:
                 ),
             )
 
-        counter: int = 0
-        streamer_list: list = []
-        tasks: list = []
+        counter = 0
+        streamer_list = []
+        tasks = []
         async for s in streamers:
             streamer_list.append((int(s.user_id), s.user_login))
             counter += 1
