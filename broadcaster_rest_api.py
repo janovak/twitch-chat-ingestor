@@ -71,7 +71,11 @@ def get_chats(
 
     row_list = list(response.chats)
 
-    # TODO: need to filter out UUIDs that preceed the UUID in 'after' for the exact same timestamp
+    # TODO: Need to filter out UUIDs that preceed the UUID in 'after' for the exact same timestamp.
+    # If first element's message id matchs the cursors message id, then proceed as normal. If not,
+    # Make two more calls to the database. One for the exact timestamp in the cursor where we ask for
+    # rows where message_id >= cursor.message_id and a second one for timestamps greater than cursor.timestamp
+    # (instead of greater than or equal to). Then stitch the results together and return.
 
     if len(row_list) <= limit:
         return jsonify(

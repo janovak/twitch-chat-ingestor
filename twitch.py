@@ -82,15 +82,14 @@ class TwitchAPIConnection:
             # Check if event loop is running
             if asyncio.get_event_loop().is_running():
                 # Schedule cleanup task in the event loop
-                asyncio.ensure_future(self.cleanup())
+                asyncio.ensure_future(self.cleanup_async())
             else:
                 # If event loop is not running, run cleanup synchronously
-                asyncio.run(self.cleanup())
+                asyncio.run(self.cleanup_async())
 
         self.connection.close()
 
-    async def cleanup(self):
-        # Close the Twitch session
+    async def cleanup_async(self):
         await self.session.close()
 
     async def authenticate(self):
@@ -111,6 +110,10 @@ class TwitchAPIConnection:
     async def join_chat_room(self, streamer_name):
         await self.chat.join_room(streamer_name)
         print(f"Joined {streamer_name}'s chat room")
+
+    async def leave_chat_room(self, streamer_name):
+        await self.chat.leave_room(streamer_name)
+        print(f"Left {streamer_name}'s chat room")
 
     async def on_message(self, msg: ChatMessage):
         message_fields = {

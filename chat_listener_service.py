@@ -19,6 +19,12 @@ class ChatRoomJoiner:
             db=0,
         )
 
+        pubsub = self.cache.pubsub()
+        pubsub.psubscribe(
+            **{"__keyevent@0__:expired": self.streamer_went_offline_callback}
+        )
+        pubsub.run_in_thread(sleep_time=1)
+
         self.connection = pika.BlockingConnection(
             pika.URLParameters(secrets.get_cloudamqp_url())
         )
@@ -39,9 +45,11 @@ class ChatRoomJoiner:
         self.connection.close()
 
     async def initialize_twitch(self):
-        auth = asyncio.create_task(self.twitch.authenticate())
-        chat = asyncio.create_task(self.twitch.initialize_chat())
-        await asyncio.gather(auth, chat)
+        await self.twitch.authenticate()
+        await self.twitch.initialize_chat()
+
+    def streamer_went_offline_callback(self, message):
+        asyncio.run(self.twitch.leave_chat_room(message["data"].decode()))
 
     def start_consuming_streamers(self):
         self.channel.basic_qos(prefetch_count=1)
@@ -69,13 +77,13 @@ class ChatRoomJoiner:
         # Possible solutions are to check the cache when we start up or to keep a separate
         # in-memory cache so it will be empty on start up.
         tasks = []
-        for user_id, user_login in streamers:
-            if not self.cache.exists(user_id):
+        for _, user_login in streamers:
+            if not self.cache.exists(user_login):
                 tasks.append(
                     asyncio.create_task(self.twitch.join_chat_room(user_login))
                 )
-                self.cache.set(user_id, "")
-            self.cache.expire(user_id, 300)
+                self.cache.set(user_login, "")
+            self.cache.expire(user_login, 300)
 
         ch.basic_ack(delivery_tag=method.delivery_tag)
 
