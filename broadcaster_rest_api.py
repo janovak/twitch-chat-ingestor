@@ -1,3 +1,5 @@
+import logging
+import uuid
 from datetime import datetime
 from typing import Optional
 
@@ -11,6 +13,7 @@ from flask_parameter_validation import Query, Route, ValidateParameters
 
 app = Flask(__name__)
 
+# gRPC client to query chat database
 grpc_channel = grpc.insecure_channel("localhost:50051")
 grpc_client = chat_database_pb2_grpc.ChatDatabaseStub(grpc_channel)
 
@@ -24,16 +27,47 @@ def serialize_chat_database_row(chat):
     }
 
 
+def serialize_chat_database_rows(list_of_chats):
+    return [serialize_chat_database_row(message) for message in list_of_chats]
+
+
+def is_guid(string):
+    try:
+        uuid.UUID(string)
+        return True
+    except ValueError:
+        return False
+
+
+# Concatenate all elements of the primary key and base62 encode it so we have URL safe string for pagination
 def get_cursor(primary_key_elements):
     cursor = " ".join(str(item) for item in primary_key_elements)
     return codec.base62_encode(cursor)
 
 
-def get_primary_key(cursor):
-    primary_key_string = codec.base62_decode(cursor)
-    return tuple(primary_key_string.split())
+# Decode cursor and return tuple of elements that make up the primary key
+def get_primary_key_elements(cursor):
+    key_elements = codec.base62_decode(cursor).split()
+    if len(key_elements) != 4:
+        logging.error(f"Cursor doesn't have 4 elements! cursor: {cursor}")
+        return None
+
+    broadcaster_id, month, timestamp, message_id = key_elements
+    if (
+        not broadcaster_id.isdigit()
+        or not month.isdigit()
+        or not timestamp.isdigit()
+        or not is_guid(message_id)
+    ):
+        logging.error(
+            f"One or more cursor fields are corrupt. broadcaster_id: {broadcaster_id}, month: {month}, timestamp: {timestamp}, message_id: {message_id}"
+        )
+        return None
+
+    return (int(broadcaster_id), int(month), int(timestamp), uuid.UUID(message_id))
 
 
+# Returns the messages sent in a given broadcaster's chat room between two timestamps
 @app.route("/v1.0/<int:broadcaster_id>/chat", methods=["GET"])
 @ValidateParameters()
 def get_chats(
@@ -43,21 +77,37 @@ def get_chats(
     after: Optional[str] = Query(),
     limit: Optional[int] = Query(min_int=1, max_int=100, default=20),
 ):
+    logging.info(
+        f"broadcaster_id: {broadcaster_id}, start: {start}, end: {end}, after: {after}, limit: {limit}"
+    )
+
+    # Ensure the cursor is valid and extract the timestamp so we know where we left off
     after_timestamp = 0
     if after is not None:
-        broadcaster_id, year_month, timestamp, _ = get_primary_key(after)
+        cursor_elements = get_primary_key_elements(after)
+        if cursor_elements is None:
+            error = {"Invalid cursor": "Corrupt fields"}
+            return error, 400
+
+        cursor_broadcaster_id, cursor_month, cursor_timestamp, _ = cursor_elements
 
         # Validate the broadcaster id
-        if not broadcaster_id.isdigit() or int(broadcaster_id) != broadcaster_id:
-            error = {"Invalid cursor": "Cursor doesn't match the broadcaster Id"}
+        if cursor_broadcaster_id != broadcaster_id:
+            logging.error(
+                f"Broadcaster Id ({cursor_broadcaster_id}) in cursor doesn't match broadcaster Id ({broadcaster_id}) passed in."
+            )
+            error = {"Invalid cursor": "Cursor doesn't match the broadcaster Id."}
             return error, 400
 
         # Validate the timestamp and month fields match
-        if get_month(timestamp) != year_month:
-            error = {"Invalid cursor": "Cursor doesn't match the timestamp"}
+        if get_month(cursor_timestamp) != cursor_month:
+            error = {"Invalid cursor": "Cursor is invalid."}
+            logging.error(
+                f"Timestamp ({cursor_timestamp}) and month ({cursor_month}) in cursor don't match."
+            )
             return error, 400
 
-        after_timestamp = int(timestamp)
+        after_timestamp = cursor_timestamp
 
     response = grpc_client.GetChats(
         chat_database_pb2.GetChatsRequest(
@@ -68,25 +118,18 @@ def get_chats(
             limit=limit,
         )
     )
+    list_of_rows = list(response.chats)
 
-    row_list = list(response.chats)
-
-    # TODO: Need to filter out UUIDs that preceed the UUID in 'after' for the exact same timestamp.
-    # If first element's message id matchs the cursors message id, then proceed as normal. If not,
-    # Make two more calls to the database. One for the exact timestamp in the cursor where we ask for
-    # rows where message_id >= cursor.message_id and a second one for timestamps greater than cursor.timestamp
-    # (instead of greater than or equal to). Then stitch the results together and return.
-
-    if len(row_list) <= limit:
-        return jsonify(
-            {
-                "messages": [
-                    serialize_chat_database_row(message) for message in row_list[:-1]
-                ]
-            }
-        )
+    if len(list_of_rows) <= limit:
+        logging.info(f"Returning {len(list_of_rows)} chats")
+        return jsonify({"messages": serialize_chat_database_rows(list_of_rows)})
     else:
-        next_element = row_list[-1]
+        # GetChats returns one more element than asked for when we need to do pagination,
+        # so omit the last row so we return the number of messages that were asked for.
+        logging.info(f"Returning {len(list_of_rows[:-1])} chats")
+
+        # Use the extra row to build the cursor we return to the user for use on subsequent calls.
+        next_element = list_of_rows[-1]
         primary_key_elements = (
             next_element.broadcaster_id,
             get_month(next_element.timestamp),
@@ -94,15 +137,21 @@ def get_chats(
             next_element.message_id,
         )
 
+        #'33569d6a-8a67-4e48-aa55-b11bf86e2268'
+
         return jsonify(
             {
-                "messages": [
-                    serialize_chat_database_row(message) for message in row_list[:-1]
-                ],
+                "messages": serialize_chat_database_rows(list_of_rows[:-1]),
                 "cursor": get_cursor(primary_key_elements),
             }
         )
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        filemode="w",
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
+
     app.run(debug=True)

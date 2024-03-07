@@ -34,9 +34,6 @@ class ChatIngester:
             f"Inserting message {message_fields['message_id']} posted in chat room {message_fields['broadcaster_id']} at {message_fields['timestamp']}"
         )
 
-        # TODO: Consider batching these inserts by broadcaster_id after coordinating all messages
-        # from a given broadcaster to go to a given worker.
-
         self.database.insert_chats(
             broadcaster_id=message_fields["broadcaster_id"],
             timestamp=message_fields["timestamp"],
