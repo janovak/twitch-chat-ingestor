@@ -37,11 +37,8 @@ class DatabaseConnection:
             ),
         )
 
-    def get_chats(self, broadcaster_id, start, end, after_timestamp, limit):
+    def get_chats(self, broadcaster_id, start, end, limit):
         self.session.row_factory = tuple_factory
-
-        start = max(start, after_timestamp)
-        year_month = get_month(start)
 
         statement = self.session.prepare(
             """
@@ -51,6 +48,7 @@ class DatabaseConnection:
             """,
         )
 
+        month = get_month(start)
         list_of_rows = []
         while len(list_of_rows) < limit + 1:
             list_of_rows.extend(
@@ -59,7 +57,7 @@ class DatabaseConnection:
                         statement,
                         (
                             broadcaster_id,
-                            year_month,
+                            month,
                             start,
                             end,
                             limit + 1 - len(list_of_rows),
@@ -67,6 +65,6 @@ class DatabaseConnection:
                     )
                 )
             )
-            year_month = get_next_month(year_month)
+            month = get_next_month(month)
 
         return list_of_rows

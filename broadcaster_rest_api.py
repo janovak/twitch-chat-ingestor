@@ -35,8 +35,10 @@ def get_chats(
         f"broadcaster_id: {broadcaster_id}, start: {start}, end: {end}, after: {after}, limit: {limit}"
     )
 
+    start_milliseconds = int(start.timestamp() * 1000)
+    end_milliseconds = int(end.timestamp() * 1000)
+
     # Ensure the cursor is valid and extract the timestamp so we know where we left off
-    after_timestamp = 0
     if after is not None:
         cursor_elements = get_primary_key_elements(after)
         if cursor_elements is None:
@@ -61,14 +63,14 @@ def get_chats(
             )
             return error, 400
 
-        after_timestamp = cursor_timestamp
+        # Override the start time if we have a cursor since we want to pick up where the last request left off
+        start = cursor_timestamp
 
     response = grpc_client.GetChats(
         chat_database_pb2.GetChatsRequest(
             broadcaster_id=broadcaster_id,
-            start=int(start.timestamp() * 1000),
-            end=int(end.timestamp() * 1000),
-            after_timestamp=after_timestamp,
+            start=start_milliseconds,
+            end=end_milliseconds,
             limit=limit,
         )
     )

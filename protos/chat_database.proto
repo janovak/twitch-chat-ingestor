@@ -22,8 +22,7 @@ message GetChatsRequest {
     uint32 broadcaster_id = 1;
     uint64 start = 2;
     uint64 end = 3;
-    uint64 after_timestamp = 4;
-    uint32 limit = 5;
+    uint32 limit = 4;
 }
 
 message GetChatsResponse {

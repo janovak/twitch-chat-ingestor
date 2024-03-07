@@ -15,7 +15,6 @@ class ChatDatabaseServicer(chat_database_pb2_grpc.ChatDatabaseServicer):
             request.broadcaster_id,
             request.start,
             request.end,
-            request.after_timestamp,
             request.limit,
         )
 
