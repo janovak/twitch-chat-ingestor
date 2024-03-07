@@ -1,4 +1,13 @@
 import base62
+import uuid
+
+
+def is_guid(string):
+    try:
+        uuid.UUID(string)
+        return True
+    except ValueError:
+        return False
 
 
 def base62_encode(string):
