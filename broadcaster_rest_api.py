@@ -1,17 +1,18 @@
 import logging
 from datetime import datetime
 from typing import Optional
+
 import gen.grpc.chat_database.chat_database_pb2 as chat_database_pb2
 import gen.grpc.chat_database.chat_database_pb2_grpc as chat_database_pb2_grpc
 import grpc
+from chat_database_utilities import (
+    get_cursor,
+    get_primary_key_elements,
+    serialize_chat_database_rows,
+)
 from datetime_helpers import get_month
 from flask import Flask, jsonify
 from flask_parameter_validation import Query, Route, ValidateParameters
-from chat_database_utilities import (
-    serialize_chat_database_rows,
-    get_cursor,
-    get_primary_key_elements,
-)
 
 app = Flask(__name__)
 
@@ -89,8 +90,6 @@ def get_chats(
             next_element.timestamp,
             next_element.message_id,
         )
-
-        #'33569d6a-8a67-4e48-aa55-b11bf86e2268'
 
         return jsonify(
             {
