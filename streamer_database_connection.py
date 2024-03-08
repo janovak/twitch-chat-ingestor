@@ -1,3 +1,5 @@
+import logging
+
 import auth.secrets as secrets
 import psycopg2
 
@@ -10,7 +12,8 @@ class DatabaseConnection:
         self.session.close()
 
     def insert_streamers(self, streamer_ids):
-        print(f"Received {len(streamer_ids)} streamer Ids")
+        logging.info(f"Inserting {len(streamer_ids)} streamer Ids")
+
         with self.session.cursor() as cursor:
             cursor.executemany(
                 "INSERT INTO Streamer (streamer_id) VALUES (%s) ON CONFLICT DO NOTHING",
@@ -21,4 +24,8 @@ class DatabaseConnection:
     def get_streamers(self):
         with self.session.cursor() as cursor:
             cursor.execute("SELECT streamer_id FROM Streamer")
-            return cursor.fetchall()
+            rows = cursor.fetchall()
+
+            logging.info(f"Retrieved {len(rows)} streamer Ids")
+
+            return rows

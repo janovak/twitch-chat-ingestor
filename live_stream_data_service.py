@@ -9,6 +9,7 @@ async def main():
     session = twitch.TwitchAPIConnection()
     await session.authenticate()
 
+    # Twitch caches are 1 to 3 minutes stale, so it doesn't make sense to poll any more frequently than that
     scheduler = AsyncIOScheduler()
     scheduler.add_job(session.get_top_streamers, "interval", minutes=5, args=(10,))
     scheduler.start()
