@@ -1,3 +1,4 @@
+import logging
 from concurrent import futures
 
 import chat_database_connection
@@ -11,6 +12,10 @@ class ChatDatabaseServicer(chat_database_pb2_grpc.ChatDatabaseServicer):
         self.database = chat_database_connection.DatabaseConnection("chat_data")
 
     def GetChats(self, request, context):
+        logging.info(
+            f"GetChats called with: broadcaster_id: {request.broadcaster_id}, start: {request.start}, end: {request.end}, limit: {request.limit}"
+        )
+
         list_of_chats = self.database.get_chats(
             request.broadcaster_id,
             request.start,
@@ -18,6 +23,9 @@ class ChatDatabaseServicer(chat_database_pb2_grpc.ChatDatabaseServicer):
             request.limit,
         )
 
+        logging.info(f"{len(list_of_chats)} messages returned by the database.")
+
+        # Repackage the chats from the database response and return the bundle back to the caller
         response = chat_database_pb2.GetChatsResponse()
         for broadcaster_id, timestamp, message_id, message in list_of_chats:
             response.chats.append(
