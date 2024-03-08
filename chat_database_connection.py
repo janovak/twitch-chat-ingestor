@@ -21,6 +21,9 @@ class DatabaseConnection:
         self.session = cluster.connect(keyspace)
 
     def __del__(self):
+        self.close()
+
+    def close(self):
         self.session.shutdown()
 
     def insert_chats(self, messages):

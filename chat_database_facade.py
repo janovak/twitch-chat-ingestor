@@ -11,6 +11,12 @@ class ChatDatabaseServicer(chat_database_pb2_grpc.ChatDatabaseServicer):
     def __init__(self):
         self.database = chat_database_connection.DatabaseConnection("chat_data")
 
+    def __del__(self):
+        self.shutdown()
+
+    def shutdown(self):
+        self.database.close()
+
     def GetChats(self, request, context):
         logging.info(
             f"GetChats called with: broadcaster_id: {request.broadcaster_id}, start: {request.start}, end: {request.end}, limit: {request.limit}"

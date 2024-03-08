@@ -9,6 +9,9 @@ class DatabaseConnection:
         self.session = psycopg2.connect(secrets.get_neon_url())
 
     def __del__(self):
+        self.close()
+
+    def close(self):
         self.session.close()
 
     def insert_streamers(self, streamer_ids):

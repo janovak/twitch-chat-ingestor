@@ -62,13 +62,13 @@ def serialize_message(msg: ChatMessage):
 
 class TwitchAPIConnection:
     def __init__(self):
-        self.session = None
+        self.twitch_session = None
         self.chat = None
 
-        self.connection = pika.BlockingConnection(
+        self.message_queue_connection = pika.BlockingConnection(
             pika.URLParameters(secrets.get_cloudamqp_url())
         )
-        self.channel = self.connection.channel()
+        self.channel = self.message_queue_connection.channel()
 
         # Create a fanout exchange to publish the broadcaster Ids to so that any service that needs
         # this information can bind a queue to this exchange
@@ -78,10 +78,15 @@ class TwitchAPIConnection:
         self.channel.queue_declare(queue="chat_processing_queue", durable=True)
 
     def __del__(self):
+        self.close()
+
+    def close(self):
+        self.message_queue_connection.close()
+
         if self.chat:
             self.chat.stop()
 
-        if self.session:
+        if self.twitch_session:
             if asyncio.get_event_loop().is_running():
                 # Schedule cleanup task in the event loop
                 asyncio.ensure_future(self.cleanup_async())
@@ -89,23 +94,21 @@ class TwitchAPIConnection:
                 # If event loop is not running, run cleanup synchronously
                 asyncio.run(self.cleanup_async())
 
-        self.connection.close()
-
     async def cleanup_async(self):
-        await self.session.close()
+        await self.twitch_session.close()
 
     async def authenticate(self):
-        self.session = await Twitch(
+        self.twitch_session = await Twitch(
             secrets.get_twitch_api_client_id(), secrets.get_twitch_api_secret()
         )
-        auth = UserAuthenticator(self.session, [AuthScope.CHAT_READ])
+        auth = UserAuthenticator(self.twitch_session, [AuthScope.CHAT_READ])
         token, refresh_token = await auth.authenticate()
-        await self.session.set_user_authentication(
+        await self.twitch_session.set_user_authentication(
             token, [AuthScope.CHAT_READ], refresh_token
         )
 
     async def initialize_chat(self):
-        self.chat = await Chat(self.session)
+        self.chat = await Chat(self.twitch_session)
         self.chat.register_event(ChatEvent.MESSAGE, self.on_message)
         self.chat.start()
 
@@ -148,7 +151,9 @@ class TwitchAPIConnection:
 
     async def get_streamers(self, batch_size):
         batch_size = min(batch_size, 100)
-        streamers = self.session.get_streams(first=batch_size, stream_type="live")
+        streamers = self.twitch_session.get_streams(
+            first=batch_size, stream_type="live"
+        )
 
         # Publishes a JSON list of streamer Ids to the chat queue. The list has a maximum of batch_size Ids
         async def publish_batch(ids):

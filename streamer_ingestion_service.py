@@ -13,10 +13,10 @@ class StreamerIngester:
 
         self.bloom_filter = pybloomfilter.BloomFilter(10000000, 0.001)
 
-        self.connection = pika.BlockingConnection(
+        self.message_queue_connection = pika.BlockingConnection(
             pika.URLParameters(secrets.get_cloudamqp_url())
         )
-        self.channel = self.connection.channel()
+        self.channel = self.message_queue_connection.channel()
 
         # The broadcaster exchange is updated with all live streamers periodically. We bind our own
         # queue to the exchange to listen to all those messages.
@@ -31,7 +31,11 @@ class StreamerIngester:
         )
 
     def __del__(self):
-        self.connection.close()
+        self.shutdown()
+
+    def shutdown(self):
+        self.message_queue_connection.close()
+        self.database.close()
 
     def initialize_bloom_filter(self):
         streamers = self.database.get_streamers()

@@ -11,7 +11,7 @@ import twitch
 
 class ChatRoomJoiner:
     def __init__(self):
-        self.twitch = twitch.TwitchAPIConnection()
+        self.twitch_session = twitch.TwitchAPIConnection()
 
         # We keep an in-memory cache in addition to the redis cache in case the process needs to be restarted.
         # Without the in-memory cache we would never rejoin the chat rooms after restarting. This still isn't
@@ -20,7 +20,7 @@ class ChatRoomJoiner:
         self.online_streamers = set()
 
         # Keeps track of online streamers
-        self.cache = redis.Redis(
+        self.redis_cache = redis.Redis(
             host=secrets.get_redis_host_url(),
             port=secrets.get_redis_host_port(),
             password=secrets.get_redis_host_password(),
@@ -29,16 +29,16 @@ class ChatRoomJoiner:
 
         # Register callback to fire when a key expiers in the cache. Note that this gets called
         # at redis's convenience and not necessarily immediately when the key expires
-        pubsub = self.cache.pubsub()
+        pubsub = self.redis_cache.pubsub()
         pubsub.psubscribe(
             **{"__keyevent@0__:expired": self.streamer_went_offline_callback}
         )
         pubsub.run_in_thread(sleep_time=1)
 
-        self.connection = pika.BlockingConnection(
+        self.message_queue_connection = pika.BlockingConnection(
             pika.URLParameters(secrets.get_cloudamqp_url())
         )
-        self.channel = self.connection.channel()
+        self.channel = self.message_queue_connection.channel()
 
         # The broadcaster exchange is updated with all live streamers periodically. We bind our own
         # queue to the exchange to listen to all those messages.
@@ -53,12 +53,16 @@ class ChatRoomJoiner:
         )
 
     def __del__(self):
-        self.cache.close()
-        self.connection.close()
+        self.shutdown()
+
+    def shutdown(self):
+        self.message_queue_connection.close()
+        self.redis_cache.close()
+        self.twitch_session.close()
 
     async def initialize_twitch(self):
-        await self.twitch.authenticate()
-        await self.twitch.initialize_chat()
+        await self.twitch_session.authenticate()
+        await self.twitch_session.initialize_chat()
 
     def streamer_went_offline_callback(self, message):
         streamer = message["data"].decode()
@@ -67,7 +71,7 @@ class ChatRoomJoiner:
 
         # Delete the streamer from the in-memory set
         self.online_streamers.remove(streamer)
-        asyncio.run(self.twitch.leave_chat_room(streamer))
+        asyncio.run(self.twitch_session.leave_chat_room(streamer))
 
     def start_consuming_streamers(self):
         self.channel.basic_qos(prefetch_count=1)
@@ -99,13 +103,13 @@ class ChatRoomJoiner:
                 logging.info(f"{user_login} just came online")
 
                 tasks.append(
-                    asyncio.create_task(self.twitch.join_chat_room(user_login))
+                    asyncio.create_task(self.twitch_session.join_chat_room(user_login))
                 )
 
-                self.cache.set(user_login, "")
+                self.redis_cache.set(user_login, "")
                 self.online_streamers.add(user_login)
 
-            self.cache.expire(user_login, 15)
+            self.redis_cache.expire(user_login, 15)
 
         ch.basic_ack(delivery_tag=method.delivery_tag)
 

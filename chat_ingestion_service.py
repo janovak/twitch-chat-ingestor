@@ -11,14 +11,18 @@ class ChatIngester:
     def __init__(self):
         self.database = chat_database_connection.DatabaseConnection("chat_data")
 
-        self.connection = pika.BlockingConnection(
+        self.message_queue_connection = pika.BlockingConnection(
             pika.URLParameters(secrets.get_cloudamqp_url())
         )
-        self.channel = self.connection.channel()
+        self.channel = self.message_queue_connection.channel()
         self.channel.queue_declare(queue="chat_processing_queue", durable=True)
 
     def __del__(self):
-        self.connection.close()
+        self.shutdown
+
+    def shutdown(self):
+        self.message_queue_connection.close()
+        self.database.close()
 
     def start_consuming_chats(self):
         self.channel.basic_qos(prefetch_count=1)
