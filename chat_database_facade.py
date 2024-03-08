@@ -41,6 +41,12 @@ class ChatDatabaseServicer(chat_database_pb2_grpc.ChatDatabaseServicer):
 
 
 def serve():
+    logging.basicConfig(
+        filemode="w",
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
+
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     chat_database_pb2_grpc.add_ChatDatabaseServicer_to_server(
         ChatDatabaseServicer(), server

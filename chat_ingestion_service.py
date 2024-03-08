@@ -46,6 +46,12 @@ class ChatIngester:
 
 
 def main():
+    logging.basicConfig(
+        filemode="w",
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
+
     session = ChatIngester()
     session.start_consuming_chats()
 

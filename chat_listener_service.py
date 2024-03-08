@@ -113,6 +113,12 @@ class ChatRoomJoiner:
 
 
 async def main():
+    logging.basicConfig(
+        filemode="w",
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
+
     joiner = ChatRoomJoiner()
     await joiner.initialize_twitch()
 

@@ -1,11 +1,18 @@
 import asyncio
 import concurrent.futures
+import logging
 
 import twitch
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 
 async def main():
+    logging.basicConfig(
+        filemode="w",
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
+
     session = twitch.TwitchAPIConnection()
     await session.authenticate()
 
