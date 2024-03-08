@@ -1,4 +1,5 @@
 import json
+import logging
 import uuid
 
 import auth.secrets as secrets
@@ -24,13 +25,13 @@ class ChatIngester:
         self.channel.basic_consume(
             queue="chat_processing_queue", on_message_callback=self.handle_chat_message
         )
-        print(f"Start consuming chats from queue")
+        logging.info("Start consuming chats from queue")
         self.channel.start_consuming()
 
     def handle_chat_message(self, ch, method, properties, body):
         message_fields = json.loads(body.decode())
 
-        print(
+        logging.info(
             f"Inserting message {message_fields['message_id']} posted in chat room {message_fields['broadcaster_id']} at {message_fields['timestamp']}"
         )
 

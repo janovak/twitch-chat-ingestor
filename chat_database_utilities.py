@@ -17,13 +17,13 @@ def serialize_chat_database_rows(list_of_chats):
     return [serialize_chat_database_row(message) for message in list_of_chats]
 
 
-# Concatenate all elements of the primary key and base62 encode it so we have URL safe string for pagination
+# Concatenate all elements of the primary key and base62 encode it so we have a URL safe string for pagination
 def get_cursor(primary_key_elements):
     cursor = " ".join(str(item) for item in primary_key_elements)
     return utilities.base62_encode(cursor)
 
 
-# Decode cursor and return tuple of elements that make up the primary key
+# Decode the cursor and return a tuple of elements that make up the primary key
 def get_primary_key_elements(cursor):
     key_elements = utilities.base62_decode(cursor).split()
     if len(key_elements) != 4:
