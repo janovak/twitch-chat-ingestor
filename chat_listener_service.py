@@ -1,6 +1,7 @@
 import asyncio
 import concurrent.futures
 import json
+import logging
 
 import auth.secrets as secrets
 import pika
@@ -12,8 +13,13 @@ class ChatRoomJoiner:
     def __init__(self):
         self.twitch = twitch.TwitchAPIConnection()
 
+        # We keep an in-memory cache in addition to the redis cache in case the process needs to be restarted.
+        # Without the in-memory cache we would never rejoin the chat rooms after restarting. This still isn't
+        # ideal since we need to wait for another message listing all the online streamers, but it's good
+        # enough for now
         self.online_streamers = set()
 
+        # Keeps track of online streamers
         self.cache = redis.Redis(
             host=secrets.get_redis_host_url(),
             port=secrets.get_redis_host_port(),
@@ -21,6 +27,8 @@ class ChatRoomJoiner:
             db=0,
         )
 
+        # Register callback to fire when a key expiers in the cache. Note that this gets called
+        # at redis's convenience and not necessarily immediately when the key expires
         pubsub = self.cache.pubsub()
         pubsub.psubscribe(
             **{"__keyevent@0__:expired": self.streamer_went_offline_callback}
@@ -32,6 +40,8 @@ class ChatRoomJoiner:
         )
         self.channel = self.connection.channel()
 
+        # The broadcaster exchange is updated with all live streamers periodically. We bind our own
+        # queue to the exchange to listen to all those messages.
         self.broadcaster_exchange = "broadcaster_fanout"
         self.channel.exchange_declare(self.broadcaster_exchange, exchange_type="fanout")
 
@@ -52,6 +62,10 @@ class ChatRoomJoiner:
 
     def streamer_went_offline_callback(self, message):
         streamer = message["data"].decode()
+
+        logging.info(f"{streamer} went offline")
+
+        # Delete the streamer from the in-memory set
         self.online_streamers.remove(streamer)
         asyncio.run(self.twitch.leave_chat_room(streamer))
 
@@ -61,7 +75,7 @@ class ChatRoomJoiner:
             queue=self.broadcaster_queue,
             on_message_callback=self.handle_live_streamers,
         )
-        print(f"Start consuming streamers from queue")
+        logging.info("Start consuming streamers from queue")
         self.channel.start_consuming()
 
     def handle_live_streamers(self, ch, method, properties, body):
@@ -70,20 +84,27 @@ class ChatRoomJoiner:
     async def handle_live_streamers_async(self, ch, method, properties, body):
         streamers = json.loads(body.decode())
 
-        print(f"Received {len(streamers)} live streamers")
+        logging.info(f"Received {len(streamers)} live streamers")
 
         if not streamers:
             ch.basic_ack(delivery_tag=method.delivery_tag)
             return
 
         tasks = []
+        # Add streamers that just went live to the redis and in-memory caches as well as join their
+        # chat room. Refresh all live streamers TTL. Streams that go offline won't be refreshed in the cashe,
+        # and after a few minutes they will expire and be removed from the cache.
         for _, user_login in streamers:
             if user_login not in self.online_streamers:
+                logging.info(f"{user_login} just came online")
+
                 tasks.append(
                     asyncio.create_task(self.twitch.join_chat_room(user_login))
                 )
+
                 self.cache.set(user_login, "")
                 self.online_streamers.add(user_login)
+
             self.cache.expire(user_login, 15)
 
         ch.basic_ack(delivery_tag=method.delivery_tag)
