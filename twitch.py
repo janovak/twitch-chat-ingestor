@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import sys
 import uuid
 
@@ -69,6 +70,8 @@ class TwitchAPIConnection:
         )
         self.channel = self.connection.channel()
 
+        # Create a fanout exchange to publish the broadcaster Ids to so that any service that needs
+        # this information can bind a queue to this exchange
         self.broadcaster_exchange = "broadcaster_fanout"
         self.channel.exchange_declare(self.broadcaster_exchange, exchange_type="fanout")
 
@@ -79,7 +82,6 @@ class TwitchAPIConnection:
             self.chat.stop()
 
         if self.session:
-            # Check if event loop is running
             if asyncio.get_event_loop().is_running():
                 # Schedule cleanup task in the event loop
                 asyncio.ensure_future(self.cleanup_async())
@@ -109,13 +111,14 @@ class TwitchAPIConnection:
 
     async def join_chat_room(self, streamer_name):
         await self.chat.join_room(streamer_name)
-        print(f"Joined {streamer_name}'s chat room")
+        logging.info(f"Joined {streamer_name}'s chat room")
 
     async def leave_chat_room(self, streamer_name):
         await self.chat.leave_room(streamer_name)
-        print(f"Left {streamer_name}'s chat room")
+        logging.info(f"Left {streamer_name}'s chat room")
 
     async def on_message(self, msg: ChatMessage):
+        # Extract relevant fields from the message and serialize it to JSON
         message_fields = {
             "broadcaster_id": int(msg.room.room_id),
             "timestamp": msg.sent_timestamp,
@@ -124,7 +127,7 @@ class TwitchAPIConnection:
         }
         message = json.dumps(message_fields)
 
-        print(
+        logging.info(
             f"Message {message_fields['message_id']} posted in chat room {message_fields['broadcaster_id']} at {message_fields['timestamp']}"
         )
 
@@ -136,17 +139,18 @@ class TwitchAPIConnection:
         )
 
     async def get_all_streamers(self):
-        print("Retrieving all currently live streamers")
+        logging.info("Retrieving all currently live streamers")
         await self.get_streamers(sys.maxint)
 
     async def get_top_streamers(self, n):
-        print(f"Retrieving top {n} currently live streamers")
+        logging.info(f"Retrieving top {n} currently live streamers")
         await self.get_streamers(n)
 
-    async def get_streamers(self, n):
-        batch_size = min(n, 100)
+    async def get_streamers(self, batch_size):
+        batch_size = min(batch_size, 100)
         streamers = self.session.get_streams(first=batch_size, stream_type="live")
 
+        # Publishes a JSON list of streamer Ids to the chat queue. The list has a maximum of batch_size Ids
         async def publish_batch(ids):
             message = json.dumps(ids)
             self.channel.basic_publish(
@@ -161,13 +165,14 @@ class TwitchAPIConnection:
         counter = 0
         streamer_list = []
         tasks = []
+        # Groups streamers into lists of 100 and then asyncronously publishes the list to the chat queue
         async for s in streamers:
             streamer_list.append((int(s.user_id), s.user_login))
             counter += 1
             if len(streamer_list) == batch_size:
                 tasks.append(asyncio.create_task(publish_batch(streamer_list.copy())))
                 streamer_list.clear()
-            if counter == n:
+            if counter == batch_size:
                 break
 
         # Publish any remaining streamers if the total count is not a multiple of batch_size
@@ -177,4 +182,4 @@ class TwitchAPIConnection:
 
         await asyncio.gather(*tasks)
 
-        print(f"Published {counter} Ids in batches of {batch_size}")
+        logging.info(f"Published {counter} Ids in batches of {batch_size}")
