@@ -4,10 +4,10 @@ import os
 # Constants for paths
 SECRETS_BASE_PATH = "secrets"
 TWITCH_API_BASE_PATH = os.path.join(SECRETS_BASE_PATH, "twitch-api")
-ASTRA_DB_BASE_PATH = os.path.join(SECRETS_BASE_PATH, "astra-db")
+ASTRA_BASE_PATH = os.path.join(SECRETS_BASE_PATH, "astra")
 REDIS_BASE_PATH = os.path.join(SECRETS_BASE_PATH, "redis")
 NEON_BASE_PATH = os.path.join(SECRETS_BASE_PATH, "neon")
-RABBITMQ_BASE_PATH = os.path.join(SECRETS_BASE_PATH, "rabbitmq")
+CLOUDAMQP_BASE_PATH = os.path.join(SECRETS_BASE_PATH, "cloudamqp")
 
 
 def load_secrets(filepath):
@@ -33,15 +33,13 @@ def load_twitch_api_secrets():
 
 
 @load_secrets_once
-def load_astra_db_secrets():
+def load_astra_secrets():
     cloud_config = {
         "secure_connect_bundle": os.path.join(
-            ASTRA_DB_BASE_PATH, "secure-connect-live-stream-data.zip"
+            ASTRA_BASE_PATH, "secure-connect-live-stream-data.zip"
         )
     }
-    secrets = load_secrets(
-        os.path.join(ASTRA_DB_BASE_PATH, "live_stream_data-token.json")
-    )
+    secrets = load_secrets(os.path.join(ASTRA_BASE_PATH, "live_stream_data-token.json"))
     return secrets, cloud_config
 
 
@@ -57,7 +55,7 @@ def load_neon_secrets():
 
 @load_secrets_once
 def load_cloudamqp_secrets():
-    return load_secrets(os.path.join(RABBITMQ_BASE_PATH, "cloudamqp-secret.json"))
+    return load_secrets(os.path.join(CLOUDAMQP_BASE_PATH, "cloudamqp-secret.json"))
 
 
 def get_twitch_api_client_id():
@@ -68,16 +66,16 @@ def get_twitch_api_secret():
     return load_twitch_api_secrets()["secret"]
 
 
-def get_chat_db_client_id():
-    return load_astra_db_secrets()[0]["clientId"]
+def get_astra_client_id():
+    return load_astra_secrets()[0]["clientId"]
 
 
-def get_chat_db_secret():
-    return load_astra_db_secrets()[0]["secret"]
+def get_astra_secret():
+    return load_astra_secrets()[0]["secret"]
 
 
-def get_astra_db_cloud_config():
-    return load_astra_db_secrets()[1]
+def get_astra_cloud_config():
+    return load_astra_secrets()[1]
 
 
 def get_redis_host_url():

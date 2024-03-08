@@ -66,12 +66,14 @@ def get_chats(
         # Override the start time if we have a cursor since we want to pick up where the last request left off
         start = cursor_timestamp
 
+    # Ask for 1 more row than the caller wants so that if we need to do pagination we can
+    # use this extra row to calculate the cursor that we send back to the caller
     response = grpc_client.GetChats(
         chat_database_pb2.GetChatsRequest(
             broadcaster_id=broadcaster_id,
             start=start_milliseconds,
             end=end_milliseconds,
-            limit=limit,
+            limit=limit + 1,
         )
     )
     list_of_rows = list(response.chats)
