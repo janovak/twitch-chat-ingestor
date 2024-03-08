@@ -13,6 +13,7 @@ from chat_database_utilities import (
 from datetime_helpers import get_month
 from flask import Flask, jsonify
 from flask_parameter_validation import Query, Route, ValidateParameters
+from grpc_status import rpc_status
 
 app = Flask(__name__)
 
@@ -42,7 +43,7 @@ def get_chats(
     if after is not None:
         cursor_elements = get_primary_key_elements(after)
         if cursor_elements is None:
-            error = {"Invalid cursor": "Corrupt fields"}
+            error = {"InvalidRequest": "Invalid cursor"}
             return error, 400
 
         cursor_broadcaster_id, cursor_month, cursor_timestamp, _ = cursor_elements
@@ -50,37 +51,45 @@ def get_chats(
         # Validate the broadcaster id
         if cursor_broadcaster_id != broadcaster_id:
             logging.error(
-                f"Broadcaster Id ({cursor_broadcaster_id}) in cursor doesn't match broadcaster Id ({broadcaster_id}) passed in."
+                f"Broadcaster Id ({cursor_broadcaster_id}) in cursor doesn't match broadcaster Id ({broadcaster_id}) passed in"
             )
-            error = {"Invalid cursor": "Cursor doesn't match the broadcaster Id."}
+            error = {"InvalidRequest": "Cursor doesn't match the broadcaster Id"}
             return error, 400
 
         # Validate the timestamp and month fields match
         if get_month(cursor_timestamp) != cursor_month:
-            error = {"Invalid cursor": "Cursor is invalid."}
+            error = {"InvalidRequest": "Invalid cursor"}
             logging.error(
-                f"Timestamp ({cursor_timestamp}) and month ({cursor_month}) in cursor don't match."
+                f"Timestamp ({cursor_timestamp}) and month ({cursor_month}) in cursor don't match"
             )
             return error, 400
 
         # Override the start time if we have a cursor since we want to pick up where the last request left off
         start = cursor_timestamp
 
-    # Ask for 1 more row than the caller wants so that if we need to do pagination we can
-    # use this extra row to calculate the cursor that we send back to the caller
-    response = grpc_client.GetChats(
-        chat_database_pb2.GetChatsRequest(
-            broadcaster_id=broadcaster_id,
-            start=start_milliseconds,
-            end=end_milliseconds,
-            limit=limit + 1,
+    list_of_rows = []
+    try:
+        # Ask for 1 more row than the caller wants so that if we need to do pagination we can
+        # use this extra row to calculate the cursor that we send back to the caller
+        response = grpc_client.GetChats(
+            chat_database_pb2.GetChatsRequest(
+                broadcaster_id=broadcaster_id,
+                start=start_milliseconds,
+                end=end_milliseconds,
+                limit=limit + 1,
+            )
         )
-    )
-    list_of_rows = list(response.chats)
+        list_of_rows = list(response.chats)
+    except grpc.RpcError as rpc_error:
+        status_code = rpc_error.code()
+        details = rpc_error.details()
+        logging.error(f"gRPC error: {status_code} {details}")
+        rpc_status_details = rpc_status.details(rpc_error)
+        logging.error(f"gRPC status details: {rpc_status_details}")
 
     if len(list_of_rows) <= limit:
         logging.info(f"Returning {len(list_of_rows)} chats")
-        return jsonify({"messages": serialize_chat_database_rows(list_of_rows)})
+        return jsonify({"messages": serialize_chat_database_rows(list_of_rows)}), 200
     else:
         # GetChats returns one more element than asked for when we need to do pagination,
         # so omit the last row so we return the number of messages that were asked for.
@@ -95,11 +104,14 @@ def get_chats(
             next_element.message_id,
         )
 
-        return jsonify(
-            {
-                "messages": serialize_chat_database_rows(list_of_rows[:-1]),
-                "cursor": get_cursor(primary_key_elements),
-            }
+        return (
+            jsonify(
+                {
+                    "messages": serialize_chat_database_rows(list_of_rows[:-1]),
+                    "cursor": get_cursor(primary_key_elements),
+                }
+            ),
+            200,
         )
 
 
