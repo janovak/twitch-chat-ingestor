@@ -40,10 +40,14 @@ class ChatIngester:
         )
 
         success = self.database.insert_chats(
-            broadcaster_id=message_fields["broadcaster_id"],
-            timestamp=message_fields["timestamp"],
-            message_id=uuid.UUID(message_fields["message_id"]),
-            message=message_fields["message"],
+            [
+                (
+                    int(message_fields["broadcaster_id"]),
+                    int(message_fields["timestamp"]),
+                    uuid.UUID(message_fields["message_id"]),
+                    message_fields["message"],
+                )
+            ]
         )
 
         if success:

@@ -3,8 +3,8 @@ import logging
 import auth.secrets as secrets
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
-from cassandra.policies import TokenAwarePolicy
-from cassandra.query import BatchStatement, tuple_factory
+from cassandra.policies import DCAwareRoundRobinPolicy, TokenAwarePolicy
+from cassandra.query import BatchStatement, BatchType, ConsistencyLevel, tuple_factory
 from datetime_helpers import get_month, get_next_month
 
 
@@ -13,11 +13,12 @@ class DatabaseConnection:
         auth_provider = PlainTextAuthProvider(
             secrets.get_astra_client_id(), secrets.get_astra_secret()
         )
+        load_balancing_policy = TokenAwarePolicy(DCAwareRoundRobinPolicy())
         cluster = Cluster(
-            cloud=secrets.get_astra_cloud_config(), auth_provider=auth_provider
+            cloud=secrets.get_astra_cloud_config(),
+            auth_provider=auth_provider,
+            load_balancing_policy=load_balancing_policy,
         )
-        load_balancing_policy = TokenAwarePolicy(cluster.load_balancing_policy)
-        cluster.set_load_balancing_policy(load_balancing_policy)
         self.session = cluster.connect(keyspace)
 
     def __del__(self):
@@ -27,9 +28,11 @@ class DatabaseConnection:
         self.session.shutdown()
 
     def insert_chats(self, messages):
-        logging.info(f"Inserting {len(messages)}")
+        logging.info(f"Inserting {len(messages)} message")
 
-        batch = BatchStatement(consistency_level="QUORUM", logged=False)
+        batch = BatchStatement(
+            consistency_level=ConsistencyLevel.QUORUM, batch_type=BatchType.UNLOGGED
+        )
 
         statement = self.session.prepare(
             """
