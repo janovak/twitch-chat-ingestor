@@ -78,15 +78,17 @@ class DatabaseConnection:
         # messages on each partition where the messages in the specified time range might live.
         while len(list_of_rows) < limit and month <= end_month:
             try:
-                rows = self.session.execute(
-                    statement,
-                    (
-                        broadcaster_id,
-                        month,
-                        start,
-                        end,
-                        limit - len(list_of_rows),
-                    ),
+                rows = list(
+                    self.session.execute(
+                        statement,
+                        (
+                            broadcaster_id,
+                            month,
+                            start,
+                            end,
+                            limit - len(list_of_rows),
+                        ),
+                    )
                 )
                 logging.info(
                     f"Successfully retrieved {len(rows)} rows from the {month} partition"
@@ -96,7 +98,7 @@ class DatabaseConnection:
                 return False, []
 
             # Include the result in the list to return
-            list_of_rows.extend(list(rows))
+            list_of_rows.extend(rows)
             # Get the next month in case we need to check the next partition for more messages
             month = get_next_month(month)
 

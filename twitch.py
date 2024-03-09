@@ -3,13 +3,37 @@ import json
 import logging
 import sys
 import uuid
-
+import utilities
 import auth.secrets as secrets
 import pika
 from twitchAPI.chat import Chat, ChatMessage
 from twitchAPI.oauth import UserAuthenticator
 from twitchAPI.twitch import Twitch
 from twitchAPI.type import AuthScope, ChatEvent
+
+
+def is_valid_message(msg: ChatMessage):
+    # Only validate the fields we a need to insert the message into the database
+    if msg is None:
+        logging.warning("msg is None")
+        return False
+    elif msg.id is None or not utilities.is_guid(msg.id):
+        logging.warning(f"msg.id is {msg.id}")
+        return False
+    elif msg.sent_timestamp is None or msg.sent_timestamp <= 0:
+        logging.warning(f"msg.sent_timestamp is {msg.sent_timestamp}")
+        return False
+    elif msg.room is None:
+        logging.warning("msg.room is None")
+        return False
+    elif msg.room.room_id is None or msg.room.room_id <= 0:
+        logging.warning(f"msg.room.room_id is {msg.room.room_id}")
+        return False
+    elif msg.user is None:
+        logging.warning("msg.user is None")
+        return False
+
+    return True
 
 
 def serialize_message(msg: ChatMessage):
@@ -122,6 +146,12 @@ class TwitchAPIConnection:
         logging.info(f"Left {streamer_name}'s chat room")
 
     async def on_message(self, msg: ChatMessage):
+        if not is_valid_message(msg):
+            logging.warning(
+                "Skipping message as it does not contain the necessary fields"
+            )
+            return
+
         # Extract relevant fields from the message and serialize it to JSON
         message_fields = {
             "broadcaster_id": int(msg.room.room_id),
@@ -144,6 +174,7 @@ class TwitchAPIConnection:
                     delivery_mode=pika.DeliveryMode.Persistent
                 ),
             )
+
             logging.info(
                 f"Published message, {message_fields['message_id']}, which was posted in chat room {message_fields['broadcaster_id']} at {message_fields['timestamp']}, to the message queue"
             )

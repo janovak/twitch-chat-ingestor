@@ -69,7 +69,7 @@ def get_chats(
     # Ensure the cursor is valid and extract the timestamp so we know where we left off
     if after is not None:
         # *result holds the cursor's timestamp on success and error information on failure
-        valid, *result = validate_cursor(after)
+        valid, *result = validate_cursor(after, broadcaster_id)
         if valid:
             # Override the start time if we have a cursor since we want to pick up where the last request left off
             start = result[0]
