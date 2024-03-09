@@ -18,16 +18,23 @@ class DatabaseConnection:
         logging.info(f"Inserting {len(streamer_ids)} streamer Ids")
 
         with self.session.cursor() as cursor:
-            cursor.executemany(
-                "INSERT INTO Streamer (streamer_id) VALUES (%s) ON CONFLICT DO NOTHING",
-                streamer_ids,
-            )
-            self.session.commit()
+            try:
+                cursor.executemany(
+                    "INSERT INTO Streamer (streamer_id) VALUES (%s) ON CONFLICT DO NOTHING",
+                    streamer_ids,
+                )
+                self.session.commit()
+            except psycopg2.Error as e:
+                logging.error(f"Error inserting streamers: {e}")
 
     def get_streamers(self):
         with self.session.cursor() as cursor:
-            cursor.execute("SELECT streamer_id FROM Streamer")
-            rows = cursor.fetchall()
+            try:
+                cursor.execute("SELECT streamer_id FROM Streamer")
+                rows = cursor.fetchall()
+            except psycopg2.Error as e:
+                logging.error(f"Error executing query: {e}")
+                return []
 
             logging.info(f"Retrieved {len(rows)} streamer Ids")
 

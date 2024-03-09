@@ -22,6 +22,33 @@ grpc_channel = grpc.insecure_channel("localhost:50051")
 grpc_client = chat_database_pb2_grpc.ChatDatabaseStub(grpc_channel)
 
 
+def validate_cursor(cursor, broadcaster_id):
+    cursor_elements = get_primary_key_elements(cursor)
+    if cursor_elements is None:
+        error = {"InvalidRequest": "Invalid cursor"}
+        return False, 400, error
+
+    cursor_broadcaster_id, cursor_month, cursor_timestamp, _ = cursor_elements
+
+    # Validate the broadcaster id
+    if cursor_broadcaster_id != broadcaster_id:
+        logging.error(
+            f"Broadcaster Id ({cursor_broadcaster_id}) in cursor doesn't match broadcaster Id ({broadcaster_id}) passed in"
+        )
+        error = {"InvalidRequest": "Cursor doesn't match the broadcaster Id"}
+        return False, 400, error
+
+    # Validate the timestamp and month fields match
+    if get_month(cursor_timestamp) != cursor_month:
+        error = {"InvalidRequest": "Invalid cursor"}
+        logging.error(
+            f"Timestamp ({cursor_timestamp}) and month ({cursor_month}) in cursor don't match"
+        )
+        return False, 400, error
+
+    return True, cursor_timestamp
+
+
 # Returns the messages sent in a given broadcaster's chat room between two timestamps
 @app.route("/v1.0/<int:broadcaster_id>/chat", methods=["GET"])
 @ValidateParameters()
@@ -41,31 +68,13 @@ def get_chats(
 
     # Ensure the cursor is valid and extract the timestamp so we know where we left off
     if after is not None:
-        cursor_elements = get_primary_key_elements(after)
-        if cursor_elements is None:
-            error = {"InvalidRequest": "Invalid cursor"}
-            return error, 400
-
-        cursor_broadcaster_id, cursor_month, cursor_timestamp, _ = cursor_elements
-
-        # Validate the broadcaster id
-        if cursor_broadcaster_id != broadcaster_id:
-            logging.error(
-                f"Broadcaster Id ({cursor_broadcaster_id}) in cursor doesn't match broadcaster Id ({broadcaster_id}) passed in"
-            )
-            error = {"InvalidRequest": "Cursor doesn't match the broadcaster Id"}
-            return error, 400
-
-        # Validate the timestamp and month fields match
-        if get_month(cursor_timestamp) != cursor_month:
-            error = {"InvalidRequest": "Invalid cursor"}
-            logging.error(
-                f"Timestamp ({cursor_timestamp}) and month ({cursor_month}) in cursor don't match"
-            )
-            return error, 400
-
-        # Override the start time if we have a cursor since we want to pick up where the last request left off
-        start = cursor_timestamp
+        # *result holds the cursor's timestamp on success and error information on failure
+        valid, *result = validate_cursor(after)
+        if valid:
+            # Override the start time if we have a cursor since we want to pick up where the last request left off
+            start = result[0]
+        else:
+            return result
 
     list_of_rows = []
     try:
@@ -81,6 +90,7 @@ def get_chats(
         )
         list_of_rows = list(response.chats)
     except grpc.RpcError as rpc_error:
+        # Log exception
         status_code = rpc_error.code()
         details = rpc_error.details()
         logging.error(f"gRPC error: {status_code} {details}")

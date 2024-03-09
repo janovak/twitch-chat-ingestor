@@ -22,14 +22,17 @@ class ChatDatabaseServicer(chat_database_pb2_grpc.ChatDatabaseServicer):
             f"GetChats called with: broadcaster_id: {request.broadcaster_id}, start: {request.start}, end: {request.end}, limit: {request.limit}"
         )
 
-        list_of_chats = self.database.get_chats(
+        success, list_of_chats = self.database.get_chats(
             request.broadcaster_id,
             request.start,
             request.end,
             request.limit,
         )
 
-        logging.info(f"{len(list_of_chats)} messages returned by the database.")
+        if success:
+            logging.info(f"{len(list_of_chats)} messages returned by the database")
+        else:
+            logging.error(f"There was an error querying the database")
 
         # Repackage the chats from the database response and return the bundle back to the caller
         response = chat_database_pb2.GetChatsResponse()

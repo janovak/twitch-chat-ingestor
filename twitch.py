@@ -69,6 +69,7 @@ class TwitchAPIConnection:
             pika.URLParameters(secrets.get_cloudamqp_url())
         )
         self.channel = self.message_queue_connection.channel()
+        self.channel.confirm_delivery()
 
         # Create a fanout exchange to publish the broadcaster Ids to so that any service that needs
         # this information can bind a queue to this exchange
@@ -134,22 +135,33 @@ class TwitchAPIConnection:
             f"Message {message_fields['message_id']} posted in chat room {message_fields['broadcaster_id']} at {message_fields['timestamp']}"
         )
 
-        self.channel.basic_publish(
-            exchange="",
-            routing_key="chat_processing_queue",
-            body=message,
-            properties=pika.BasicProperties(delivery_mode=pika.DeliveryMode.Persistent),
-        )
+        try:
+            self.channel.basic_publish(
+                exchange="",
+                routing_key="chat_processing_queue",
+                body=message,
+                properties=pika.BasicProperties(
+                    delivery_mode=pika.DeliveryMode.Persistent
+                ),
+            )
+            logging.info(
+                f"Published message, {message_fields['message_id']}, which was posted in chat room {message_fields['broadcaster_id']} at {message_fields['timestamp']}, to the message queue"
+            )
+        except Exception as e:
+            logging.error(f"Publishing message error: {e}")
+            logging.error(
+                f"Failed to publish message, {message_fields['message_id']}, which was posted in chat room {message_fields['broadcaster_id']} at {message_fields['timestamp']}, to the message queue"
+            )
 
     async def get_all_streamers(self):
         logging.info("Retrieving all currently live streamers")
-        await self.get_streamers(sys.maxint)
+        await self.get_online_streamers(sys.maxint)
 
     async def get_top_streamers(self, n):
         logging.info(f"Retrieving top {n} currently live streamers")
-        await self.get_streamers(n)
+        await self.get_online_streamers(n)
 
-    async def get_streamers(self, batch_size):
+    async def get_online_streamers(self, batch_size):
         batch_size = min(batch_size, 100)
         streamers = self.twitch_session.get_streams(
             first=batch_size, stream_type="live"

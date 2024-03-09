@@ -39,12 +39,21 @@ class ChatIngester:
             f"Inserting message {message_fields['message_id']} posted in chat room {message_fields['broadcaster_id']} at {message_fields['timestamp']}"
         )
 
-        self.database.insert_chats(
+        success = self.database.insert_chats(
             broadcaster_id=message_fields["broadcaster_id"],
             timestamp=message_fields["timestamp"],
             message_id=uuid.UUID(message_fields["message_id"]),
             message=message_fields["message"],
         )
+
+        if success:
+            logging.info(
+                f"Message, {message_fields['message_id']}, inserted successfully"
+            )
+        else:
+            logging.error(
+                f"There was an error inserting message, {message_fields['message_id']}, into the database"
+            )
 
         ch.basic_ack(delivery_tag=method.delivery_tag)
 
