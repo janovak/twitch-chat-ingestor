@@ -18,7 +18,7 @@ async def main():
 
     # Twitch caches are 1 to 3 minutes stale, so it doesn't make sense to poll any more frequently than that
     scheduler = AsyncIOScheduler()
-    scheduler.add_job(session.get_top_streamers, "interval", minutes=5, args=(10,))
+    scheduler.add_job(session.get_top_streamers, "interval", minutes=5, args=(1,))
     scheduler.start()
 
     loop = asyncio.get_running_loop()
