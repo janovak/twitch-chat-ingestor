@@ -72,8 +72,10 @@ def get_chats(
         valid, *result = validate_cursor(after, broadcaster_id)
         if valid:
             # Override the start time if we have a cursor since we want to pick up where the last request left off
-            start = result[0]
+            start_milliseconds = result[0]
         else:
+            # validate_cursor returns an HTTP status code and error when the cursor is invalid. We just need
+            # to return this error.
             return result
 
     list_of_rows = []
