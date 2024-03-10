@@ -109,7 +109,7 @@ class ChatRoomJoiner:
                 self.redis_cache.set(user_login, "")
                 self.online_streamers.add(user_login)
 
-            self.redis_cache.expire(user_login, 15)
+            self.redis_cache.expire(user_login, 300)
 
         ch.basic_ack(delivery_tag=method.delivery_tag)
 

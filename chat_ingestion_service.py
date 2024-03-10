@@ -1,10 +1,12 @@
 import json
 import logging
 import uuid
+from collections import defaultdict
 
 import auth.secrets as secrets
 import chat_database_connection
 import pika
+from datetime_helpers import get_month
 
 
 class ChatIngester:
@@ -16,6 +18,12 @@ class ChatIngester:
         )
         self.channel = self.message_queue_connection.channel()
         self.channel.queue_declare(queue="chat_processing_queue", durable=True)
+
+        # Dictionary to hold messages until we have enough to write to the database
+        # The key is the database partition key and value is a list of messages
+        self.message_batches = defaultdict(list)
+        self.batch_size = 1000
+        self.current_batch_size = 0
 
     def __del__(self):
         self.shutdown
@@ -34,31 +42,50 @@ class ChatIngester:
 
     def handle_chat_message(self, ch, method, properties, body):
         message_fields = json.loads(body.decode())
+        message_fields["message_id"] = uuid.UUID(message_fields["message_id"])
+
+        def get_partition_key(fields):
+            return f"{fields['broadcaster_id']} {get_month(fields['timestamp'])}"
+
+        def get_primary_key(fields):
+            return " ".join(
+                [
+                    get_partition_key(fields),
+                    str(fields["timestamp"]),
+                    str(fields["message_id"]),
+                ]
+            )
 
         logging.info(
-            f"Inserting message {message_fields['message_id']} posted in chat room {message_fields['broadcaster_id']} at {message_fields['timestamp']}"
+            f"Saving message, {get_primary_key(message_fields)}, to in-memory store"
         )
 
-        success = self.database.insert_chats(
-            [
-                (
-                    int(message_fields["broadcaster_id"]),
-                    int(message_fields["timestamp"]),
-                    uuid.UUID(message_fields["message_id"]),
-                    message_fields["message"],
+        # Convert the values in the message_fields dictionary to a tuple and then append it the list
+        # holding all the messages in the same partition
+        self.current_batch_size += 1
+        self.message_batches[get_partition_key(message_fields)].append(
+            tuple(message_fields[key] for key in list(message_fields))
+        )
+
+        if self.current_batch_size < self.batch_size:
+            ch.basic_ack(delivery_tag=method.delivery_tag)
+            return
+
+        for partition_key, message_list in self.message_batches.items():
+            success = self.database.insert_chats([message for message in message_list])
+
+            if success:
+                logging.info(
+                    f"Inserted {len(message_list)} messages into {partition_key} successfully"
                 )
-            ]
-        )
+            else:
+                logging.error(
+                    f"There was an error inserting {len(message_list)} messages into {partition_key}"
+                )
 
-        if success:
-            logging.info(
-                f"Message, {message_fields['message_id']}, inserted successfully"
-            )
-        else:
-            logging.error(
-                f"There was an error inserting message, {message_fields['message_id']}, into the database"
-            )
-
+        self.message_batches = defaultdict(list)
+        self.current_batch_size = 0
+        logging.info(f"Finished inserting message batch")
         ch.basic_ack(delivery_tag=method.delivery_tag)
 
 

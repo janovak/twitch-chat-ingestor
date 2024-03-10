@@ -26,7 +26,7 @@ def is_valid_message(msg: ChatMessage):
     elif msg.room is None:
         logging.warning("msg.room is None")
         return False
-    elif msg.room.room_id is None or msg.room.room_id <= 0:
+    elif msg.room.room_id is None or int(msg.room.room_id) <= 0:
         logging.warning(f"msg.room.room_id is {msg.room.room_id}")
         return False
     elif msg.user is None:
