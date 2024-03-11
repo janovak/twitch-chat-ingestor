@@ -95,11 +95,6 @@ class TwitchAPIConnection:
         self.channel = self.message_queue_connection.channel()
         self.channel.confirm_delivery()
 
-        # Create a fanout exchange to publish the broadcaster Ids to so that any service that needs
-        # this information can bind a queue to this exchange
-        self.broadcaster_exchange = "broadcaster_fanout"
-        self.channel.exchange_declare(self.broadcaster_exchange, exchange_type="fanout")
-
         # Create a fanout exchange to publish the chat messages to so that any service that needs
         # this information can bind a queue to this exchange
         self.chat_exchange = "chat_fanout"

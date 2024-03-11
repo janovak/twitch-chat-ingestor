@@ -43,7 +43,7 @@ class ChatAnomalyDetector:
     def start_consuming_chats(self):
         self.channel.basic_qos(prefetch_count=1)
         self.channel.basic_consume(
-            queue="chat_anomaly_detection_queue",
+            queue=self.chat_queue,
             on_message_callback=self.handle_chat_message,
         )
         logging.info("Start consuming chats from queue")

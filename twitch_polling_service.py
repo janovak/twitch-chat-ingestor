@@ -11,7 +11,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 
 class TwitchAPIPoller:
-    def __int__(self):
+    def __init__(self):
         self.twitch_session = twitch_proxy.TwitchAPIConnection()
 
         self.message_queue_connection = pika.BlockingConnection(
@@ -44,7 +44,7 @@ class TwitchAPIPoller:
 
     async def get_online_streamers(self, batch_size):
         batch_size = min(batch_size, 100)
-        streamers = self.twitch_session.get_online_streamers(batch_size)
+        streamers = await self.twitch_session.get_online_streamers(batch_size)
 
         # Publishes a JSON list of streamer Ids to the chat queue. The list has a maximum of batch_size Ids
         async def publish_batch(ids):
@@ -89,7 +89,7 @@ async def main():
     )
 
     session = TwitchAPIPoller()
-    session.authenticate()
+    await session.authenticate()
     session.start_polling_online_streamers()
 
     loop = asyncio.get_running_loop()
