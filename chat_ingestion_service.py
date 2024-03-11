@@ -9,7 +9,7 @@ import pika
 from datetime_helpers import get_month
 
 
-class ChatIngester:
+class ChatIngestor:
     def __init__(self):
         self.database = chat_database_connection.DatabaseConnection("chat_data")
 
@@ -17,7 +17,15 @@ class ChatIngester:
             pika.URLParameters(secrets.get_cloudamqp_url())
         )
         self.channel = self.message_queue_connection.channel()
-        self.channel.queue_declare(queue="chat_processing_queue", durable=True)
+
+        # The all chat messages are published to the chat exchange
+        self.chat_exchange = "chat_fanout"
+        self.channel.exchange_declare(self.chat_exchange, exchange_type="fanout")
+
+        self.chat_queue = "chat_ingestion_queue"
+        self.channel.queue_declare(queue=self.chat_queue, durable=True)
+
+        self.channel.queue_bind(exchange=self.chat_exchange, queue=self.chat_queue)
 
         # Dictionary to hold messages until we have enough to write to the database
         # The key is the database partition key and value is a list of messages
@@ -26,7 +34,7 @@ class ChatIngester:
         self.current_batch_size = 0
 
     def __del__(self):
-        self.shutdown
+        self.shutdown()
 
     def shutdown(self):
         self.message_queue_connection.close()
@@ -35,7 +43,7 @@ class ChatIngester:
     def start_consuming_chats(self):
         self.channel.basic_qos(prefetch_count=1)
         self.channel.basic_consume(
-            queue="chat_processing_queue", on_message_callback=self.handle_chat_message
+            queue=self.chat_queue, on_message_callback=self.handle_chat_message
         )
         logging.info("Start consuming chats from queue")
         self.channel.start_consuming()
@@ -96,7 +104,7 @@ def main():
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
-    session = ChatIngester()
+    session = ChatIngestor()
     session.start_consuming_chats()
 
 

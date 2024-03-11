@@ -1,11 +1,11 @@
 import asyncio
 import json
 import logging
-import sys
 import uuid
-import utilities
+
 import auth.secrets as secrets
 import pika
+import utilities
 from twitchAPI.chat import Chat, ChatMessage
 from twitchAPI.oauth import UserAuthenticator
 from twitchAPI.twitch import Twitch
@@ -95,12 +95,10 @@ class TwitchAPIConnection:
         self.channel = self.message_queue_connection.channel()
         self.channel.confirm_delivery()
 
-        # Create a fanout exchange to publish the broadcaster Ids to so that any service that needs
+        # Create a fanout exchange to publish the chat messages to so that any service that needs
         # this information can bind a queue to this exchange
-        self.broadcaster_exchange = "broadcaster_fanout"
-        self.channel.exchange_declare(self.broadcaster_exchange, exchange_type="fanout")
-
-        self.channel.queue_declare(queue="chat_processing_queue", durable=True)
+        self.chat_exchange = "chat_fanout"
+        self.channel.exchange_declare(self.chat_exchange, exchange_type="fanout")
 
     def __del__(self):
         self.close()
@@ -167,8 +165,8 @@ class TwitchAPIConnection:
 
         try:
             self.channel.basic_publish(
-                exchange="",
-                routing_key="chat_processing_queue",
+                exchange=self.chat_exchange,
+                routing_key="",
                 body=message,
                 properties=pika.BasicProperties(
                     delivery_mode=pika.DeliveryMode.Persistent
@@ -184,50 +182,9 @@ class TwitchAPIConnection:
                 f"Failed to publish message, {message_fields['message_id']}, which was posted in chat room {message_fields['broadcaster_id']} at {message_fields['timestamp']}, to the message queue"
             )
 
-    async def get_all_streamers(self):
-        logging.info("Retrieving all currently live streamers")
-        await self.get_online_streamers(sys.maxint)
-
-    async def get_top_streamers(self, n):
-        logging.info(f"Retrieving top {n} currently live streamers")
-        await self.get_online_streamers(n)
-
     async def get_online_streamers(self, batch_size):
-        batch_size = min(batch_size, 100)
+        logging.info(f"Retrieving currently live streamers")
         streamers = self.twitch_session.get_streams(
             first=batch_size, stream_type="live"
         )
-
-        # Publishes a JSON list of streamer Ids to the chat queue. The list has a maximum of batch_size Ids
-        async def publish_batch(ids):
-            message = json.dumps(ids)
-            self.channel.basic_publish(
-                exchange=self.broadcaster_exchange,
-                routing_key="",
-                body=message,
-                properties=pika.BasicProperties(
-                    delivery_mode=pika.DeliveryMode.Persistent
-                ),
-            )
-
-        counter = 0
-        streamer_list = []
-        tasks = []
-        # Groups streamers into lists of 100 and then asyncronously publishes the list to the chat queue
-        async for s in streamers:
-            streamer_list.append((int(s.user_id), s.user_login))
-            counter += 1
-            if len(streamer_list) == batch_size:
-                tasks.append(asyncio.create_task(publish_batch(streamer_list.copy())))
-                streamer_list.clear()
-            if counter == batch_size:
-                break
-
-        # Publish any remaining streamers if the total count is not a multiple of batch_size
-        if streamer_list:
-            counter += len(streamer_list)
-            tasks.append(asyncio.create_task(publish_batch(streamer_list)))
-
-        await asyncio.gather(*tasks)
-
-        logging.info(f"Published {counter} Ids in batches of {batch_size}")
+        return streamers

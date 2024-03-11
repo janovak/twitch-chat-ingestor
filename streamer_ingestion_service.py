@@ -7,11 +7,11 @@ import pybloomfilter
 import streamer_database_connection
 
 
-class StreamerIngester:
+class StreamerIngestor:
     def __init__(self):
         self.database = streamer_database_connection.DatabaseConnection()
 
-        self.bloom_filter = pybloomfilter.BloomFilter(10000000, 0.001)
+        self.bloom_filter = pybloomfilter.BloomFilter(10000000, 0.01)
 
         self.message_queue_connection = pika.BlockingConnection(
             pika.URLParameters(secrets.get_cloudamqp_url())
@@ -77,7 +77,7 @@ def main():
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
-    session = StreamerIngester()
+    session = StreamerIngestor()
     session.initialize_bloom_filter()
     session.start_consuming_streamers()
 
