@@ -9,7 +9,7 @@ import pika
 from datetime_helpers import get_month
 
 
-class ChatIngester:
+class ChatIngestor:
     def __init__(self):
         self.database = chat_database_connection.DatabaseConnection("chat_data")
 
@@ -34,7 +34,7 @@ class ChatIngester:
         self.current_batch_size = 0
 
     def __del__(self):
-        self.shutdown
+        self.shutdown()
 
     def shutdown(self):
         self.message_queue_connection.close()
@@ -104,7 +104,7 @@ def main():
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
-    session = ChatIngester()
+    session = ChatIngestor()
     session.start_consuming_chats()
 
 
