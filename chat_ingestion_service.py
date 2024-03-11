@@ -17,7 +17,15 @@ class ChatIngester:
             pika.URLParameters(secrets.get_cloudamqp_url())
         )
         self.channel = self.message_queue_connection.channel()
-        self.channel.queue_declare(queue="chat_processing_queue", durable=True)
+
+        # The all chat messages are published to the chat exchange
+        self.chat_exchange = "chat_fanout"
+        self.channel.exchange_declare(self.chat_exchange, exchange_type="fanout")
+
+        self.chat_queue = "chat_ingestion_queue"
+        self.channel.queue_declare(queue=self.chat_queue, durable=True)
+
+        self.channel.queue_bind(exchange=self.chat_exchange, queue=self.chat_queue)
 
         # Dictionary to hold messages until we have enough to write to the database
         # The key is the database partition key and value is a list of messages

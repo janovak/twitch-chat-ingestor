@@ -100,7 +100,10 @@ class TwitchAPIConnection:
         self.broadcaster_exchange = "broadcaster_fanout"
         self.channel.exchange_declare(self.broadcaster_exchange, exchange_type="fanout")
 
-        self.channel.queue_declare(queue="chat_processing_queue", durable=True)
+        # Create a fanout exchange to publish the chat messages to so that any service that needs
+        # this information can bind a queue to this exchange
+        self.chat_exchange = "chat_fanout"
+        self.channel.exchange_declare(self.chat_exchange, exchange_type="fanout")
 
     def __del__(self):
         self.close()
@@ -167,8 +170,8 @@ class TwitchAPIConnection:
 
         try:
             self.channel.basic_publish(
-                exchange="",
-                routing_key="chat_processing_queue",
+                exchange=self.chat_exchange,
+                routing_key="",
                 body=message,
                 properties=pika.BasicProperties(
                     delivery_mode=pika.DeliveryMode.Persistent
