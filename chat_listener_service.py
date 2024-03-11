@@ -6,12 +6,12 @@ import logging
 import auth.secrets as secrets
 import pika
 import redis
-import twitch
+import twitch_proxy
 
 
 class ChatRoomJoiner:
     def __init__(self):
-        self.twitch_session = twitch.TwitchAPIConnection()
+        self.twitch_session = twitch_proxy.TwitchAPIConnection()
 
         # We keep an in-memory cache in addition to the redis cache in case the process needs to be restarted.
         # Without the in-memory cache we would never rejoin the chat rooms after restarting. This still isn't

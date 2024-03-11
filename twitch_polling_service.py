@@ -6,13 +6,13 @@ import sys
 
 import auth.secrets as secrets
 import pika
-import twitch
+import twitch_proxy
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 
 class TwitchAPIPoller:
     def __int__(self):
-        self.twitch_session = twitch.TwitchAPIConnection()
+        self.twitch_session = twitch_proxy.TwitchAPIConnection()
 
         self.message_queue_connection = pika.BlockingConnection(
             pika.URLParameters(secrets.get_cloudamqp_url())
