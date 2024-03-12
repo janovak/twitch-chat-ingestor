@@ -104,3 +104,53 @@ class DatabaseConnection:
 
         logging.info(f"Returning {len(list_of_rows)} rows")
         return True, list_of_rows
+
+    def insert_clip(self, timestamp, clip_id):
+        logging.info(f"Inserting {clip_id}")
+
+        statement = self.session.prepare(
+            """
+            INSERT INTO clips_by_timestamp (timestamp, clip_id)
+            VALUES (?, ?)
+            """
+        )
+
+        try:
+            self.session.execute(statement, (timestamp, clip_id,))
+            logging.info("Clip inserted successfully")
+            return True
+        except Exception as e:
+            logging.error(f"Exception: {e}")
+            return False
+
+    def get_clips(self, after_timestamp):
+        logging.info(
+            f"Attempting to retrieve all clips since {after_timestamp}
+        )
+
+        self.session.row_factory = tuple_factory
+
+        statement = self.session.prepare(
+            """
+            SELECT clip_id FROM clips_by_timestamp
+            WHERE timestamp>=?
+            """,
+        )
+
+        try:
+            rows = list(
+                self.session.execute(
+                    statement,
+                    (
+                        after_timestamp
+                    ),
+                )
+            )
+            logging.info(
+                f"Successfully retrieved {len(rows)} rows"
+            )
+            return rows
+        except Exception as e:
+            logging.error(f"Exception: {e}")
+            return False, []
+
