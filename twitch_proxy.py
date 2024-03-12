@@ -124,10 +124,12 @@ class TwitchAPIConnection:
         self.twitch_session = await Twitch(
             secrets.get_twitch_api_client_id(), secrets.get_twitch_api_secret()
         )
-        auth = UserAuthenticator(self.twitch_session, [AuthScope.CHAT_READ])
+        auth = UserAuthenticator(
+            self.twitch_session, [AuthScope.CHAT_READ, AuthScope.CLIPS_EDIT]
+        )
         token, refresh_token = await auth.authenticate()
         await self.twitch_session.set_user_authentication(
-            token, [AuthScope.CHAT_READ], refresh_token
+            token, [AuthScope.CHAT_READ, AuthScope.CLIPS_EDIT], refresh_token
         )
 
     async def initialize_chat(self):
@@ -188,3 +190,7 @@ class TwitchAPIConnection:
             first=batch_size, stream_type="live"
         )
         return streamers
+
+    async def create_clip(self, broadcaster_id):
+        response = await self.twitch_session.create_clip(broadcaster_id)
+        return response.id

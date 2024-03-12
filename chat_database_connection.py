@@ -116,7 +116,13 @@ class DatabaseConnection:
         )
 
         try:
-            self.session.execute(statement, (timestamp, clip_id,))
+            self.session.execute(
+                statement,
+                (
+                    timestamp,
+                    clip_id,
+                ),
+            )
             logging.info("Clip inserted successfully")
             return True
         except Exception as e:
@@ -124,9 +130,7 @@ class DatabaseConnection:
             return False
 
     def get_clips(self, after_timestamp):
-        logging.info(
-            f"Attempting to retrieve all clips since {after_timestamp}
-        )
+        logging.info(f"Attempting to retrieve all clips since {after_timestamp}")
 
         self.session.row_factory = tuple_factory
 
@@ -141,16 +145,11 @@ class DatabaseConnection:
             rows = list(
                 self.session.execute(
                     statement,
-                    (
-                        after_timestamp
-                    ),
+                    (after_timestamp),
                 )
             )
-            logging.info(
-                f"Successfully retrieved {len(rows)} rows"
-            )
+            logging.info(f"Successfully retrieved {len(rows)} rows")
             return rows
         except Exception as e:
             logging.error(f"Exception: {e}")
             return False, []
-
