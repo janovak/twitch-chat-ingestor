@@ -129,15 +129,15 @@ class DatabaseConnection:
             logging.error(f"Exception: {e}")
             return False
 
-    def get_clips(self, after_timestamp):
-        logging.info(f"Attempting to retrieve all clips since {after_timestamp}")
+    def get_clips(self, start, end):
+        logging.info(f"Attempting to retrieve all clips {start} and {end}")
 
         self.session.row_factory = tuple_factory
 
         statement = self.session.prepare(
             """
             SELECT clip_id FROM clips_by_timestamp
-            WHERE timestamp>=?
+            WHERE timestamp>=? AND timestamp<=?
             """,
         )
 
@@ -145,7 +145,7 @@ class DatabaseConnection:
             rows = list(
                 self.session.execute(
                     statement,
-                    (after_timestamp),
+                    (start, end),
                 )
             )
             logging.info(f"Successfully retrieved {len(rows)} rows")
