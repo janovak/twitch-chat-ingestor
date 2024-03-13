@@ -19,12 +19,23 @@ class ChatDatabaseStub(object):
                 request_serializer=gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetChatsRequest.SerializeToString,
                 response_deserializer=gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetChatsResponse.FromString,
                 )
+        self.Clips = channel.unary_unary(
+                '/chatdatabase.ChatDatabase/Clips',
+                request_serializer=gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetClipsRequest.SerializeToString,
+                response_deserializer=gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetClipsResponse.FromString,
+                )
 
 
 class ChatDatabaseServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def GetChats(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def Clips(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -37,6 +48,11 @@ def add_ChatDatabaseServicer_to_server(servicer, server):
                     servicer.GetChats,
                     request_deserializer=gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetChatsRequest.FromString,
                     response_serializer=gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetChatsResponse.SerializeToString,
+            ),
+            'Clips': grpc.unary_unary_rpc_method_handler(
+                    servicer.Clips,
+                    request_deserializer=gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetClipsRequest.FromString,
+                    response_serializer=gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetClipsResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -62,5 +78,22 @@ class ChatDatabase(object):
         return grpc.experimental.unary_unary(request, target, '/chatdatabase.ChatDatabase/GetChats',
             gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetChatsRequest.SerializeToString,
             gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetChatsResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def Clips(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/chatdatabase.ChatDatabase/Clips',
+            gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetClipsRequest.SerializeToString,
+            gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetClipsResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

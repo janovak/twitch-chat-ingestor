@@ -34,3 +34,23 @@ class GetChatsResponse(_message.Message):
     CHATS_FIELD_NUMBER: _ClassVar[int]
     chats: _containers.RepeatedCompositeFieldContainer[Chat]
     def __init__(self, chats: _Optional[_Iterable[_Union[Chat, _Mapping]]] = ...) -> None: ...
+
+class Clip(_message.Message):
+    __slots__ = ("clip_id",)
+    CLIP_ID_FIELD_NUMBER: _ClassVar[int]
+    clip_id: str
+    def __init__(self, clip_id: _Optional[str] = ...) -> None: ...
+
+class GetClipsRequest(_message.Message):
+    __slots__ = ("start", "end")
+    START_FIELD_NUMBER: _ClassVar[int]
+    END_FIELD_NUMBER: _ClassVar[int]
+    start: int
+    end: int
+    def __init__(self, start: _Optional[int] = ..., end: _Optional[int] = ...) -> None: ...
+
+class GetClipsResponse(_message.Message):
+    __slots__ = ("clips",)
+    CLIPS_FIELD_NUMBER: _ClassVar[int]
+    clips: _containers.RepeatedCompositeFieldContainer[Clip]
+    def __init__(self, clips: _Optional[_Iterable[_Union[Clip, _Mapping]]] = ...) -> None: ...
