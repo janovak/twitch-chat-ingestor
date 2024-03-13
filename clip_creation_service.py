@@ -43,12 +43,15 @@ class ClipCreator:
     def start_consuming_chats(self):
         self.channel.basic_qos(prefetch_count=1)
         self.channel.basic_consume(
-            queue=self.anomaly_exchange, on_message_callback=self.handle_chat_message
+            queue=self.anomaly_queue, on_message_callback=self.handle_chat_message
         )
         logging.info("Start consuming anomalies from queue")
         self.channel.start_consuming()
 
     def handle_chat_message(self, ch, method, properties, body):
+        asyncio.run(self.handle_chat_message_async(ch, method, properties, body))
+
+    async def handle_chat_message_async(self, ch, method, properties, body):
         message_fields = json.loads(body.decode())
 
         broadcaster_id = message_fields["broadcaster_id"]
@@ -58,15 +61,15 @@ class ClipCreator:
 
         # Clips can only go back 30 seconds from the time of the call, so we've missed
         # our opportunity to capture the moment if 30 seconds has gone by
-        if datetime.now.timestamp() - timestamp > 30:
+        if datetime.now().timestamp() - timestamp > 30:
             ch.basic_ack(delivery_tag=method.delivery_tag)
             return
 
         # Clip is not guaranteed to be created. We're not going to bother with confirming
         # that the clip has been crated at this point in time.
-        clip_id = self.twitch_session.create_clip(broadcaster_id)
+        clip_id = await self.twitch_session.create_clip(broadcaster_id)
 
-        self.database.insert_clip(clip_id)
+        self.database.insert_clip(clip_id, timestamp)
 
         ch.basic_ack(delivery_tag=method.delivery_tag)
 
@@ -80,11 +83,10 @@ async def main():
 
     session = ClipCreator()
     await session.authenticate()
-    session.start_polling_online_streamers()
 
     loop = asyncio.get_running_loop()
     with concurrent.futures.ThreadPoolExecutor() as pool:
-        await loop.run_in_executor(pool, input, "Press enter to exit\n")
+        await loop.run_in_executor(pool, session.start_consuming_chats)
 
 
 asyncio.get_event_loop().run_until_complete(main())

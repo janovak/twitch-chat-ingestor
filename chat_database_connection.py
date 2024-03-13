@@ -105,13 +105,13 @@ class DatabaseConnection:
         logging.info(f"Returning {len(list_of_rows)} rows")
         return True, list_of_rows
 
-    def insert_clip(self, timestamp, clip_id):
+    def insert_clip(self, clip_id, timestamp):
         logging.info(f"Inserting {clip_id}")
 
         statement = self.session.prepare(
             """
-            INSERT INTO clips_by_timestamp (timestamp, clip_id)
-            VALUES (?, ?)
+            INSERT INTO clips_by_timestamp (partition_key, timestamp, clip_id)
+            VALUES (?, ?, ?)
             """
         )
 
@@ -119,6 +119,7 @@ class DatabaseConnection:
             self.session.execute(
                 statement,
                 (
+                    1,
                     timestamp,
                     clip_id,
                 ),

@@ -61,9 +61,9 @@ class AnomalyDetector:
         timestamp = message_fields["timestamp"] // 1000
         self.anomaly_detection_per_broadcaster[broadcaster_id].append(timestamp)
 
-        # Only check for anomalies if we have at least 500 data points
+        # Only check for anomalies if we have at least 5 minutes (60 buckets * 5 second bucket size) of data
         if (
-            self.anomaly_detection_per_broadcaster[broadcaster_id].size() > 500
+            self.anomaly_detection_per_broadcaster[broadcaster_id].size() > 60
             and self.anomaly_detection_per_broadcaster[
                 broadcaster_id
             ].check_for_anomaly()
@@ -72,7 +72,7 @@ class AnomalyDetector:
                 timestamp - self.last_broadcaster_anomaly[broadcaster_id]
                 > self.broadcaster_anomaly_cooldown
             ):
-                logging.info(f"Anomaly detected in {broadcaster_id}'s chat room")
+                logging.error(f"Anomaly detected in {broadcaster_id}'s chat room")
                 self.last_broadcaster_anomaly[broadcaster_id] = timestamp
 
                 message = json.dumps(

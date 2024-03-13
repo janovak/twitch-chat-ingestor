@@ -38,7 +38,7 @@ class TwitchAPIPoller:
     def start_polling_online_streamers(self):
         # Twitch caches are 1 to 3 minutes stale, so it doesn't make sense to poll any more frequently than that
         scheduler = AsyncIOScheduler()
-        scheduler.add_job(self.get_top_streamers, "interval", seconds=5, args=(10,))
+        scheduler.add_job(self.get_top_streamers, "interval", minutes=1, args=(10,))
         scheduler.start()
 
     async def get_all_streamers(self):
