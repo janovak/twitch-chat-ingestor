@@ -36,7 +36,7 @@ class ChatRoomJoiner:
         pubsub.run_in_thread(sleep_time=1)
 
         self.message_queue_connection = pika.BlockingConnection(
-            pika.URLParameters(secrets.get_cloudamqp_url())
+            pika.ConnectionParameters(host=secrets.get_cloudamqp_url())
         )
         self.channel = self.message_queue_connection.channel()
 
@@ -119,7 +119,7 @@ class ChatRoomJoiner:
 async def main():
     logging.basicConfig(
         filemode="w",
-        level=logging.INFO,
+        level=logging.WARNING,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 

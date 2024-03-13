@@ -90,7 +90,7 @@ class TwitchAPIConnection:
         self.chat = None
 
         self.message_queue_connection = pika.BlockingConnection(
-            pika.URLParameters(secrets.get_cloudamqp_url())
+            pika.ConnectionParameters(host=secrets.get_cloudamqp_url())
         )
         self.channel = self.message_queue_connection.channel()
         self.channel.confirm_delivery()

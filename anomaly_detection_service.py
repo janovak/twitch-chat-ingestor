@@ -13,7 +13,7 @@ class AnomalyDetector:
         self.database = chat_database_connection.DatabaseConnection("chat_data")
 
         self.message_queue_connection = pika.BlockingConnection(
-            pika.URLParameters(secrets.get_cloudamqp_url())
+            pika.ConnectionParameters(host=secrets.get_cloudamqp_url())
         )
         self.channel = self.message_queue_connection.channel()
 
@@ -87,7 +87,7 @@ class AnomalyDetector:
 def main():
     logging.basicConfig(
         filemode="w",
-        level=logging.INFO,
+        level=logging.WARNING,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 

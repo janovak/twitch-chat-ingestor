@@ -14,7 +14,7 @@ class StreamerIngestor:
         self.bloom_filter = pybloomfilter.BloomFilter(10000000, 0.01)
 
         self.message_queue_connection = pika.BlockingConnection(
-            pika.URLParameters(secrets.get_cloudamqp_url())
+            pika.ConnectionParameters(host=secrets.get_cloudamqp_url())
         )
         self.channel = self.message_queue_connection.channel()
 

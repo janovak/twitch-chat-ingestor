@@ -14,7 +14,7 @@ class ChatIngestor:
         self.database = chat_database_connection.DatabaseConnection("chat_data")
 
         self.message_queue_connection = pika.BlockingConnection(
-            pika.URLParameters(secrets.get_cloudamqp_url())
+            pika.ConnectionParameters(host=secrets.get_cloudamqp_url())
         )
         self.channel = self.message_queue_connection.channel()
 
