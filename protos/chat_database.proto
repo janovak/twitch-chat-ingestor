@@ -9,6 +9,7 @@ package chatdatabase;
 
 service ChatDatabase {
   rpc GetChats(GetChatsRequest) returns (GetChatsResponse) {}
+  rpc Clips(GetClipsRequest) returns (GetClipsResponse) {}
 }
 
 message Chat {
@@ -27,4 +28,17 @@ message GetChatsRequest {
 
 message GetChatsResponse {
     repeated Chat chats = 1;
+}
+
+message Clip {
+    string clip_id = 1;
+}
+
+message GetClipsRequest {
+    uint64 start = 1;
+    uint64 end = 2;
+}
+
+message GetClipsResponse {
+    repeated Clip clips = 1;
 }

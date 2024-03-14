@@ -1,0 +1,12 @@
+APScheduler==3.10.4
+base_62==0.1.1
+cassandra_driver==3.29.0
+Flask==3.0.2
+Flask_Parameter_Validation==2.2.4
+grpcio_status==1.62.1
+pika==1.3.2
+protobuf==5.26.0
+psycopg2_binary==2.9.9
+pybloomfiltermmap3==0.5.7
+redis==5.0.3
+twitchAPI==4.2.0

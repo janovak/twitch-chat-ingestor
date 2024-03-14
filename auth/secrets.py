@@ -95,4 +95,4 @@ def get_neon_url():
 
 
 def get_cloudamqp_url():
-    return load_cloudamqp_secrets()["cloudAMQPURL"]
+    return "localhost"  # load_cloudamqp_secrets()["cloudAMQPURL"]

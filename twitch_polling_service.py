@@ -15,7 +15,7 @@ class TwitchAPIPoller:
         self.twitch_session = twitch_proxy.TwitchAPIConnection()
 
         self.message_queue_connection = pika.BlockingConnection(
-            pika.URLParameters(secrets.get_cloudamqp_url())
+            pika.ConnectionParameters(host=secrets.get_cloudamqp_url())
         )
         self.channel = self.message_queue_connection.channel()
         self.channel.confirm_delivery()
@@ -25,13 +25,20 @@ class TwitchAPIPoller:
         self.broadcaster_exchange = "broadcaster_fanout"
         self.channel.exchange_declare(self.broadcaster_exchange, exchange_type="fanout")
 
+    def __del__(self):
+        self.shutdown()
+
+    def shutdown(self):
+        self.message_queue_connection.close()
+        self.twitch_session.close()
+
     async def authenticate(self):
         await self.twitch_session.authenticate()
 
     def start_polling_online_streamers(self):
         # Twitch caches are 1 to 3 minutes stale, so it doesn't make sense to poll any more frequently than that
         scheduler = AsyncIOScheduler()
-        scheduler.add_job(self.get_top_streamers, "interval", minutes=5, args=(1,))
+        scheduler.add_job(self.get_top_streamers, "interval", minutes=1, args=(10,))
         scheduler.start()
 
     async def get_all_streamers(self):

@@ -14,11 +14,11 @@ class ChatIngestor:
         self.database = chat_database_connection.DatabaseConnection("chat_data")
 
         self.message_queue_connection = pika.BlockingConnection(
-            pika.URLParameters(secrets.get_cloudamqp_url())
+            pika.ConnectionParameters(host=secrets.get_cloudamqp_url())
         )
         self.channel = self.message_queue_connection.channel()
 
-        # The all chat messages are published to the chat exchange
+        # All chat messages are published to the chat exchange
         self.chat_exchange = "chat_fanout"
         self.channel.exchange_declare(self.chat_exchange, exchange_type="fanout")
 

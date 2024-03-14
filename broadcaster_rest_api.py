@@ -127,6 +127,49 @@ def get_chats(
         )
 
 
+# Returns the clips created based on spikes in chat messages in the broadcaster's chat room
+@app.route("/v1.0/<int:broadcaster_id>/clip", methods=["GET"])
+@ValidateParameters()
+def get_chats(
+    broadcaster_id: int = Route(),
+    start: datetime = Query(),
+    end: datetime = Query(),
+):
+    logging.info(f"broadcaster_id: {broadcaster_id}, start: {start}, end: {end}")
+
+    start_timestamp = int(start.timestamp())
+    end_timeestamp = int(end.timestamp())
+
+    clip_ids = []
+    try:
+        response = grpc_client.GetClips(
+            chat_database_pb2.GetClipsRequest(
+                broadcaster_id=broadcaster_id,
+                start=start_timestamp,
+                end=end_timeestamp,
+            )
+        )
+        clip_ids = list(response.chats)
+    except grpc.RpcError as rpc_error:
+        # Log exception
+        status_code = rpc_error.code()
+        details = rpc_error.details()
+        logging.error(f"gRPC error: {status_code} {details}")
+        rpc_status_details = rpc_status.details(rpc_error)
+        logging.error(f"gRPC status details: {rpc_status_details}")
+
+        urls = [f"https://clips.twitch.tv/embed?clip={id}" for id in clip_ids]
+
+        return (
+            jsonify(
+                {
+                    "clip_urls": urls,
+                }
+            ),
+            200,
+        )
+
+
 if __name__ == "__main__":
     logging.basicConfig(
         filemode="w",
