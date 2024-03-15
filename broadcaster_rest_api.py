@@ -96,8 +96,6 @@ def get_chats(
         status_code = rpc_error.code()
         details = rpc_error.details()
         logging.error(f"gRPC error: {status_code} {details}")
-        rpc_status_details = rpc_status.details(rpc_error)
-        logging.error(f"gRPC status details: {rpc_status_details}")
 
     if len(list_of_rows) <= limit:
         logging.info(f"Returning {len(list_of_rows)} chats")
@@ -128,14 +126,13 @@ def get_chats(
 
 
 # Returns the clips created based on spikes in chat messages in the broadcaster's chat room
-@app.route("/v1.0/<int:broadcaster_id>/clip", methods=["GET"])
+@app.route("/v1.0/clip", methods=["GET"])
 @ValidateParameters()
-def get_chats(
-    broadcaster_id: int = Route(),
+def get_clips(
     start: datetime = Query(),
     end: datetime = Query(),
 ):
-    logging.info(f"broadcaster_id: {broadcaster_id}, start: {start}, end: {end}")
+    logging.info(f"start: {start}, end: {end}")
 
     start_timestamp = int(start.timestamp())
     end_timeestamp = int(end.timestamp())
@@ -144,7 +141,6 @@ def get_chats(
     try:
         response = grpc_client.GetClips(
             chat_database_pb2.GetClipsRequest(
-                broadcaster_id=broadcaster_id,
                 start=start_timestamp,
                 end=end_timeestamp,
             )
