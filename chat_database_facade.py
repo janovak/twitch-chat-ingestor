@@ -48,6 +48,28 @@ class ChatDatabaseServicer(chat_database_pb2_grpc.ChatDatabaseServicer):
 
         return response
 
+    def GetClips(self, request, context):
+        logging.info(
+            f"GetClips called with: start: {request.start}, end: {request.end}"
+        )
+
+        success, list_of_clips = self.database.get_clips(
+            request.start,
+            request.end,
+        )
+
+        if success:
+            logging.info(f"{len(list_of_clips)} clips returned by the database")
+        else:
+            logging.error(f"There was an error querying the database")
+
+        # Repackage the clips from the database response and return the bundle back to the caller
+        response = chat_database_pb2.GetClipsResponse()
+        for clip_id in list_of_clips:
+            response.clips.append(chat_database_pb2.Clip(clip_id=clip_id))
+
+        return response
+
 
 def serve():
     logging.basicConfig(
