@@ -14,14 +14,14 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n*gen/grpc/chat_database/chat_database.proto\x12\x0c\x63hatdatabase\"V\n\x04\x43hat\x12\x16\n\x0e\x62roadcaster_id\x18\x01 \x01(\r\x12\x11\n\ttimestamp\x18\x02 \x01(\x04\x12\x12\n\nmessage_id\x18\x03 \x01(\t\x12\x0f\n\x07message\x18\x04 \x01(\t\"T\n\x0fGetChatsRequest\x12\x16\n\x0e\x62roadcaster_id\x18\x01 \x01(\r\x12\r\n\x05start\x18\x02 \x01(\x04\x12\x0b\n\x03\x65nd\x18\x03 \x01(\x04\x12\r\n\x05limit\x18\x04 \x01(\r\"5\n\x10GetChatsResponse\x12!\n\x05\x63hats\x18\x01 \x03(\x0b\x32\x12.chatdatabase.Chat\"\x17\n\x04\x43lip\x12\x0f\n\x07\x63lip_id\x18\x01 \x01(\t\"-\n\x0fGetClipsRequest\x12\r\n\x05start\x18\x01 \x01(\x04\x12\x0b\n\x03\x65nd\x18\x02 \x01(\x04\"5\n\x10GetClipsResponse\x12!\n\x05\x63lips\x18\x01 \x03(\x0b\x32\x12.chatdatabase.Clip2\xa5\x01\n\x0c\x43hatDatabase\x12K\n\x08GetChats\x12\x1d.chatdatabase.GetChatsRequest\x1a\x1e.chatdatabase.GetChatsResponse\"\x00\x12H\n\x05\x43lips\x12\x1d.chatdatabase.GetClipsRequest\x1a\x1e.chatdatabase.GetClipsResponse\"\x00\x42<\n\x1ftwitchapiextended.chat.databaseB\x11\x43hatDatabaseProtoP\x01\xa2\x02\x03\x63\x64\x62\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n*gen/grpc/chat_database/chat_database.proto\x12\x0c\x63hatdatabase\"V\n\x04\x43hat\x12\x16\n\x0e\x62roadcaster_id\x18\x01 \x01(\r\x12\x11\n\ttimestamp\x18\x02 \x01(\x04\x12\x12\n\nmessage_id\x18\x03 \x01(\t\x12\x0f\n\x07message\x18\x04 \x01(\t\"T\n\x0fGetChatsRequest\x12\x16\n\x0e\x62roadcaster_id\x18\x01 \x01(\r\x12\r\n\x05start\x18\x02 \x01(\x04\x12\x0b\n\x03\x65nd\x18\x03 \x01(\x04\x12\r\n\x05limit\x18\x04 \x01(\r\"5\n\x10GetChatsResponse\x12!\n\x05\x63hats\x18\x01 \x03(\x0b\x32\x12.chatdatabase.Chat\"\x17\n\x04\x43lip\x12\x0f\n\x07\x63lip_id\x18\x01 \x01(\t\"-\n\x0fGetClipsRequest\x12\r\n\x05start\x18\x01 \x01(\x04\x12\x0b\n\x03\x65nd\x18\x02 \x01(\x04\"5\n\x10GetClipsResponse\x12!\n\x05\x63lips\x18\x01 \x03(\x0b\x32\x12.chatdatabase.Clip2\xa8\x01\n\x0c\x43hatDatabase\x12K\n\x08GetChats\x12\x1d.chatdatabase.GetChatsRequest\x1a\x1e.chatdatabase.GetChatsResponse\"\x00\x12K\n\x08GetClips\x12\x1d.chatdatabase.GetClipsRequest\x1a\x1e.chatdatabase.GetClipsResponse\"\x00\x42=\n twitchchatingestor.chat.databaseB\x11\x43hatDatabaseProtoP\x01\xa2\x02\x03\x63\x64\x62\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'gen.grpc.chat_database.chat_database_pb2', _globals)
 if _descriptor._USE_C_DESCRIPTORS == False:
   _globals['DESCRIPTOR']._options = None
-  _globals['DESCRIPTOR']._serialized_options = b'\n\037twitchapiextended.chat.databaseB\021ChatDatabaseProtoP\001\242\002\003cdb'
+  _globals['DESCRIPTOR']._serialized_options = b'\n twitchchatingestor.chat.databaseB\021ChatDatabaseProtoP\001\242\002\003cdb'
   _globals['_CHAT']._serialized_start=60
   _globals['_CHAT']._serialized_end=146
   _globals['_GETCHATSREQUEST']._serialized_start=148
@@ -35,5 +35,5 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _globals['_GETCLIPSRESPONSE']._serialized_start=361
   _globals['_GETCLIPSRESPONSE']._serialized_end=414
   _globals['_CHATDATABASE']._serialized_start=417
-  _globals['_CHATDATABASE']._serialized_end=582
+  _globals['_CHATDATABASE']._serialized_end=585
 # @@protoc_insertion_point(module_scope)

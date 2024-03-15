@@ -13,7 +13,6 @@ from chat_database_utilities import (
 from datetime_helpers import get_month
 from flask import Flask, jsonify
 from flask_parameter_validation import Query, Route, ValidateParameters
-from grpc_status import rpc_status
 
 app = Flask(__name__)
 
@@ -151,8 +150,6 @@ def get_clips(
         status_code = rpc_error.code()
         details = rpc_error.details()
         logging.error(f"gRPC error: {status_code} {details}")
-        rpc_status_details = rpc_status.details(rpc_error)
-        logging.error(f"gRPC status details: {rpc_status_details}")
 
         urls = [f"https://clips.twitch.tv/embed?clip={id}" for id in clip_ids]
 

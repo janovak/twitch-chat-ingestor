@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 option java_multiple_files = true;
-option java_package = "twitchapiextended.chat.database";
+option java_package = "twitchchatingestor.chat.database";
 option java_outer_classname = "ChatDatabaseProto";
 option objc_class_prefix = "cdb";
 
@@ -9,7 +9,7 @@ package chatdatabase;
 
 service ChatDatabase {
   rpc GetChats(GetChatsRequest) returns (GetChatsResponse) {}
-  rpc Clips(GetClipsRequest) returns (GetClipsResponse) {}
+  rpc GetClips(GetClipsRequest) returns (GetClipsResponse) {}
 }
 
 message Chat {
