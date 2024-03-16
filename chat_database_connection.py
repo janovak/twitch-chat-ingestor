@@ -138,7 +138,7 @@ class DatabaseConnection:
         statement = self.session.prepare(
             """
             SELECT clip_id FROM clips_by_timestamp
-            WHERE timestamp>=? AND timestamp<=?
+            WHERE partition_key=1 AND timestamp>=? AND timestamp<=?
             """,
         )
 
@@ -146,11 +146,11 @@ class DatabaseConnection:
             rows = list(
                 self.session.execute(
                     statement,
-                    (start, end),
+                    (end, start),
                 )
             )
             logging.info(f"Successfully retrieved {len(rows)} rows")
-            return rows
+            return True, rows
         except Exception as e:
             logging.error(f"Exception: {e}")
             return False, []

@@ -12,9 +12,11 @@ from chat_database_utilities import (
 )
 from datetime_helpers import get_month
 from flask import Flask, jsonify
+from flask_cors import CORS
 from flask_parameter_validation import Query, Route, ValidateParameters
 
 app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "https://janovak.github.io"}})
 
 # gRPC client to query chat database
 grpc_channel = grpc.insecure_channel("localhost:50051")
@@ -144,23 +146,23 @@ def get_clips(
                 end=end_timeestamp,
             )
         )
-        clip_ids = list(response.chats)
+        clip_ids = list(response.clips)
     except grpc.RpcError as rpc_error:
         # Log exception
         status_code = rpc_error.code()
         details = rpc_error.details()
         logging.error(f"gRPC error: {status_code} {details}")
 
-        urls = [f"https://clips.twitch.tv/embed?clip={id}" for id in clip_ids]
+    urls = [f"https://clips.twitch.tv/embed?clip={id.clip_id}" for id in clip_ids]
 
-        return (
-            jsonify(
-                {
-                    "clip_urls": urls,
-                }
-            ),
-            200,
-        )
+    return (
+        jsonify(
+            {
+                "clip_urls": urls,
+            }
+        ),
+        200,
+    )
 
 
 if __name__ == "__main__":
@@ -170,4 +172,4 @@ if __name__ == "__main__":
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
-    app.run(debug=True)
+    app.run(host='0.0.0.0', debug=True)
