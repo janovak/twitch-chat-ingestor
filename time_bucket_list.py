@@ -34,6 +34,9 @@ class RunningVariance:
         return self.variance() ** 0.5
 
 
+import logging
+
+
 class TimeBucketList:
     def __init__(self, bucket_size):
         self.running_variance = RunningVariance()
@@ -63,11 +66,14 @@ class TimeBucketList:
         # Now update the bucket to reflect that we started a new bucket
         self.current_bucket = bucket
         self.last_bucket_aggregate = self.current_bucket_aggregate
+        logging.error(f"{self.last_bucket_aggregate}")
         self.current_bucket_aggregate = 1
 
     def check_for_anomaly(self):
-        threshold = self.running_variance.standard_deviation() * 3
+        threshold = self.running_variance.standard_deviation() * 5
         anomaly_detected = self.last_bucket_aggregate > threshold
+        if anomaly_detected:
+            logging.error(f"{self.last_bucket_aggregate}   {threshold}")
         return anomaly_detected
 
     def append_and_check_for_anomaly(self, timestamp):

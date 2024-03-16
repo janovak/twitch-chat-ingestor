@@ -1,4 +1,5 @@
 import logging
+import os
 from datetime import datetime
 from typing import Optional
 
@@ -18,8 +19,12 @@ from flask_parameter_validation import Query, Route, ValidateParameters
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "https://janovak.github.io"}})
 
+
+# Get the ip address of the gRPC server that sits in front of the database
+database_grpc_ip = os.environ.get("DATABASE_GRPC_SERVER", "localhost")
+
 # gRPC client to query chat database
-grpc_channel = grpc.insecure_channel("localhost:50051")
+grpc_channel = grpc.insecure_channel(f"{database_grpc_ip}:50051")
 grpc_client = chat_database_pb2_grpc.ChatDatabaseStub(grpc_channel)
 
 
@@ -93,10 +98,10 @@ def get_chats(
         )
         list_of_rows = list(response.chats)
     except grpc.RpcError as rpc_error:
-        # Log exception
         status_code = rpc_error.code()
         details = rpc_error.details()
         logging.error(f"gRPC error: {status_code} {details}")
+        return 500, f"gRPC error: {status_code} {details}"
 
     if len(list_of_rows) <= limit:
         logging.info(f"Returning {len(list_of_rows)} chats")
@@ -148,10 +153,10 @@ def get_clips(
         )
         clip_ids = list(response.clips)
     except grpc.RpcError as rpc_error:
-        # Log exception
         status_code = rpc_error.code()
         details = rpc_error.details()
         logging.error(f"gRPC error: {status_code} {details}")
+        return 500, f"gRPC error: {status_code} {details}"
 
     urls = [f"https://clips.twitch.tv/embed?clip={id.clip_id}" for id in clip_ids]
 
@@ -172,4 +177,4 @@ if __name__ == "__main__":
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
-    app.run(host='0.0.0.0', debug=True)
+    app.run(host="0.0.0.0", debug=True)
