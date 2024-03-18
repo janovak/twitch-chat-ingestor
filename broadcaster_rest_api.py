@@ -12,12 +12,10 @@ from chat_database_utilities import (
     serialize_chat_database_rows,
 )
 from datetime_helpers import get_month
-from flask import Flask, jsonify
-from flask_cors import CORS
+from flask import Flask, jsonify, render_template
 from flask_parameter_validation import Query, Route, ValidateParameters
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "https://janovak.github.io"}})
 
 
 # Get the ip address of the gRPC server that sits in front of the database
@@ -30,6 +28,10 @@ grpc_client = chat_database_pb2_grpc.ChatDatabaseStub(grpc_channel)
 
 logging.info(f"{database_grpc_ip}")
 print(f"{grpc_channel}")
+
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 
 def validate_cursor(cursor, broadcaster_id):
@@ -180,8 +182,5 @@ if __name__ == "__main__":
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
-
-    logging.info("test")
-    print("test")
 
     app.run(debug=True)
