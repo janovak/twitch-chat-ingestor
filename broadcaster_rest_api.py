@@ -20,18 +20,15 @@ app = Flask(__name__)
 
 # Get the ip address of the gRPC server that sits in front of the database
 database_grpc_ip = os.environ.get("DATABASE_GRPC_SERVER", "localhost")
-logging.info(f"{database_grpc_ip}")
-print(f"{database_grpc_ip}")
+
 # gRPC client to query chat database
 grpc_channel = grpc.insecure_channel(f"{database_grpc_ip}:50051")
 grpc_client = chat_database_pb2_grpc.ChatDatabaseStub(grpc_channel)
 
-logging.info(f"{database_grpc_ip}")
-print(f"{grpc_channel}")
 
-@app.route('/')
+@app.route("/")
 def index():
-    return render_template('index.html')
+    return render_template("index.html")
 
 
 def validate_cursor(cursor, broadcaster_id):
