@@ -7,7 +7,6 @@ import auth.secrets as secrets
 import chat_database_connection
 import pika
 import twitch_proxy
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 
 class ClipCreator:
@@ -69,22 +68,18 @@ class ClipCreator:
             )
             return
 
+        # Initiate creation of the clip, wait 15 seconds to give Twitch time to publish the clip,
+        # and then fetch the published clip and insert it in the database
+        ch.basic_ack(delivery_tag=method.delivery_tag)
+
         clip_id = await self.twitch_session.create_clip(broadcaster_id)
 
-        async def get_and_store_clip(clip_id, timestamp):
+        async def get_and_insert_clip(clip_id, timestamp):
+            await asyncio.sleep(15)  # TODO: Make this delay non blocking
             id, url, thumbnail = await self.twitch_session.get_clip(clip_id)
             self.database.insert_clip(timestamp, id, url, thumbnail)
 
-        scheduler = AsyncIOScheduler()
-        scheduler.add_job(
-            get_and_store_clip,
-            "date",
-            run_date="now + 15 seconds",
-            args=(clip_id),
-        )
-        scheduler.start()
-
-        ch.basic_ack(delivery_tag=method.delivery_tag)
+        await get_and_insert_clip(clip_id, timestamp)
 
 
 async def main():

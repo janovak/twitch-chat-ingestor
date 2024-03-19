@@ -10,6 +10,7 @@ from chat_database_utilities import (
     get_cursor,
     get_primary_key_elements,
     serialize_chat_database_rows,
+    serialize_clip_database_rows,
 )
 from datetime_helpers import get_month
 from flask import Flask, jsonify, render_template
@@ -146,7 +147,7 @@ def get_clips(
     start_timestamp = int(start.timestamp())
     end_timeestamp = int(end.timestamp())
 
-    clip_ids = []
+    clips = []
     try:
         response = grpc_client.GetClips(
             chat_database_pb2.GetClipsRequest(
@@ -154,19 +155,17 @@ def get_clips(
                 end=end_timeestamp,
             )
         )
-        clip_ids = list(response.clips)
+        clips = list(response.clips)
     except grpc.RpcError as rpc_error:
         status_code = rpc_error.code()
         details = rpc_error.details()
         logging.error(f"gRPC error: {status_code} {details}")
         return 500, f"gRPC error: {status_code} {details}"
 
-    urls = [f"https://clips.twitch.tv/embed?clip={id.clip_id}" for id in clip_ids]
-
     return (
         jsonify(
             {
-                "clip_urls": urls,
+                "clips": serialize_clip_database_rows(clips),
             }
         ),
         200,

@@ -65,8 +65,12 @@ class ChatDatabaseServicer(chat_database_pb2_grpc.ChatDatabaseServicer):
 
         # Repackage the clips from the database response and return the bundle back to the caller
         response = chat_database_pb2.GetClipsResponse()
-        for clip_id, in list_of_clips:
-            response.clips.append(chat_database_pb2.Clip(clip_id=clip_id))
+        for clip_id, embed_url, thumbnail_url in list_of_clips:
+            response.clips.append(
+                chat_database_pb2.Clip(
+                    clip_id=clip_id, embed_url=embed_url, thumbnail_url=thumbnail_url
+                )
+            )
 
         return response
 
