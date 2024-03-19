@@ -5,34 +5,55 @@ document.addEventListener("DOMContentLoaded", function () {
 function fetchVideos() {
     let currentDate = new Date();
     const currentISODate = currentDate.toISOString();
-    const twentyFourHoursAgoDate = new Date(currentDate.getTime() - (7 * 24 * 60 * 60 * 1000));
+    const twentyFourHoursAgoDate = new Date(currentDate.getTime() - (24 * 60 * 60 * 1000));
     const twentyFourHoursAgoISODate = twentyFourHoursAgoDate.toISOString();
 
     // Construct the API URL with start and stop timestamps
     const apiUrl = `https://streamer-summaries.com:443/v1.0/clip?start=${currentISODate}&end=${twentyFourHoursAgoISODate}`;
-
     fetch(apiUrl)
         .then(response => response.json())
-        .then(data => renderVideos(data.clip_urls))
-        .catch(error => console.error("Error fetching videos:", error));
+        .then(data => {
+            const thumbnailsContainer = document.getElementById('videoContainer');
 
+            // Display thumbnails
+            data.clips.forEach(thumbnailData => {
+                const thumbnailUrl = thumbnailData.thumbnail_url;
+                const embeddedUrl = thumbnailData.embed_url;
+
+                // Create a new image element to get dimensions
+                const img = new Image();
+                img.onload = function () {
+                    const thumbnailElement = document.createElement('img');
+                    thumbnailElement.src = thumbnailUrl;
+                    thumbnailElement.style.cursor = 'pointer'; // Add pointer cursor
+
+                    // Set width and height based on image dimensions
+                    thumbnailElement.style.width = img.naturalWidth + 'px';
+                    thumbnailElement.style.height = img.naturalHeight + 'px';
+
+                    thumbnailElement.addEventListener('click', () => {
+                        // Load embedded URL when thumbnail is clicked
+                        loadEmbeddedUrl(embeddedUrl, thumbnailElement);
+                    });
+                    thumbnailsContainer.appendChild(thumbnailElement);
+
+                };
+                img.src = thumbnailUrl; // Start loading the image
+            });
+        })
+        .catch(error => console.error('Error fetching thumbnails:', error));
 }
 
-function renderVideos(videoLinks) {
-    const videoContainer = document.getElementById("videoContainer");
+function loadEmbeddedUrl(embeddedUrl, thumbnailElement) {
+    const iframe = document.createElement('iframe');
+    iframe.src = embeddedUrl + "&parent=streamer-summaries.com" + "&autoplay=true";
+    iframe.setAttribute('allow', 'autoplay');
 
-    videoLinks.forEach(link => {
-        // Append &parent=janovak.github.io to each link
-        const modifiedLink = link + "&parent=streamer-summaries.com";
+    // Set iframe size to match thumbnail
+    const thumbnailRect = thumbnailElement.getBoundingClientRect();
+    iframe.style.width = thumbnailRect.width + 'px';
+    iframe.style.height = thumbnailRect.height + 'px';
 
-        // Create iframe element
-        const iframeElement = document.createElement("iframe");
-        iframeElement.src = modifiedLink;
-        iframeElement.frameborder = "0";
-        iframeElement.allowfullscreen = true;
-
-        // Append iframe element to container
-        videoContainer.appendChild(iframeElement);
-    });
+    // Replace the thumbnail with the iframe
+    thumbnailElement.parentNode.replaceChild(iframe, thumbnailElement);
 }
-
