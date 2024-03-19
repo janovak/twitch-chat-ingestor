@@ -2,9 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-from gen.grpc.chat_database import (
-    chat_database_pb2 as gen_dot_grpc_dot_chat__database_dot_chat__database__pb2,
-)
+from gen.grpc.chat_database import chat_database_pb2 as gen_dot_grpc_dot_chat__database_dot_chat__database__pb2
 
 
 class ChatDatabaseStub(object):
@@ -17,15 +15,15 @@ class ChatDatabaseStub(object):
             channel: A grpc.Channel.
         """
         self.GetChats = channel.unary_unary(
-            "/chatdatabase.ChatDatabase/GetChats",
-            request_serializer=gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetChatsRequest.SerializeToString,
-            response_deserializer=gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetChatsResponse.FromString,
-        )
+                '/chatdatabase.ChatDatabase/GetChats',
+                request_serializer=gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetChatsRequest.SerializeToString,
+                response_deserializer=gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetChatsResponse.FromString,
+                )
         self.GetClips = channel.unary_unary(
-            "/chatdatabase.ChatDatabase/GetClips",
-            request_serializer=gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetClipsRequest.SerializeToString,
-            response_deserializer=gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetClipsResponse.FromString,
-        )
+                '/chatdatabase.ChatDatabase/GetClips',
+                request_serializer=gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetClipsRequest.SerializeToString,
+                response_deserializer=gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetClipsResponse.FromString,
+                )
 
 
 class ChatDatabaseServicer(object):
@@ -34,93 +32,68 @@ class ChatDatabaseServicer(object):
     def GetChats(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details("Method not implemented!")
-        raise NotImplementedError("Method not implemented!")
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
 
     def GetClips(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details("Method not implemented!")
-        raise NotImplementedError("Method not implemented!")
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
 
 
 def add_ChatDatabaseServicer_to_server(servicer, server):
     rpc_method_handlers = {
-        "GetChats": grpc.unary_unary_rpc_method_handler(
-            servicer.GetChats,
-            request_deserializer=gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetChatsRequest.FromString,
-            response_serializer=gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetChatsResponse.SerializeToString,
-        ),
-        "GetClips": grpc.unary_unary_rpc_method_handler(
-            servicer.GetClips,
-            request_deserializer=gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetClipsRequest.FromString,
-            response_serializer=gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetClipsResponse.SerializeToString,
-        ),
+            'GetChats': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetChats,
+                    request_deserializer=gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetChatsRequest.FromString,
+                    response_serializer=gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetChatsResponse.SerializeToString,
+            ),
+            'GetClips': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetClips,
+                    request_deserializer=gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetClipsRequest.FromString,
+                    response_serializer=gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetClipsResponse.SerializeToString,
+            ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-        "chatdatabase.ChatDatabase", rpc_method_handlers
-    )
+            'chatdatabase.ChatDatabase', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
 
 
-# This class is part of an EXPERIMENTAL API.
+ # This class is part of an EXPERIMENTAL API.
 class ChatDatabase(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def GetChats(
-        request,
-        target,
-        options=(),
-        channel_credentials=None,
-        call_credentials=None,
-        insecure=False,
-        compression=None,
-        wait_for_ready=None,
-        timeout=None,
-        metadata=None,
-    ):
-        return grpc.experimental.unary_unary(
-            request,
+    def GetChats(request,
             target,
-            "/chatdatabase.ChatDatabase/GetChats",
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/chatdatabase.ChatDatabase/GetChats',
             gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetChatsRequest.SerializeToString,
             gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetChatsResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-        )
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
-    def GetClips(
-        request,
-        target,
-        options=(),
-        channel_credentials=None,
-        call_credentials=None,
-        insecure=False,
-        compression=None,
-        wait_for_ready=None,
-        timeout=None,
-        metadata=None,
-    ):
-        return grpc.experimental.unary_unary(
-            request,
+    def GetClips(request,
             target,
-            "/chatdatabase.ChatDatabase/GetClips",
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/chatdatabase.ChatDatabase/GetClips',
             gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetClipsRequest.SerializeToString,
             gen_dot_grpc_dot_chat__database_dot_chat__database__pb2.GetClipsResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-        )
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

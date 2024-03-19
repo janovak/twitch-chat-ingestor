@@ -105,13 +105,13 @@ class DatabaseConnection:
         logging.info(f"Returning {len(list_of_rows)} rows")
         return True, list_of_rows
 
-    def insert_clip(self, clip_id, timestamp):
+    def insert_clip(self, timestamp, clip_id, embed_url, thumbnail_url):
         logging.info(f"Inserting {clip_id}")
 
         statement = self.session.prepare(
             """
-            INSERT INTO clips_by_timestamp (partition_key, timestamp, clip_id)
-            VALUES (?, ?, ?)
+            INSERT INTO clips_by_timestamp (partition_key, timestamp, clip_id, embed_url, thumbnail_url)
+            VALUES (?, ?, ?, ?, ?)
             """
         )
 
@@ -122,6 +122,8 @@ class DatabaseConnection:
                     1,
                     timestamp,
                     clip_id,
+                    embed_url,
+                    thumbnail_url,
                 ),
             )
             logging.info("Clip inserted successfully")
@@ -137,7 +139,7 @@ class DatabaseConnection:
 
         statement = self.session.prepare(
             """
-            SELECT clip_id FROM clips_by_timestamp
+            SELECT clip_id, embed_url, thumbnail_url FROM clips_by_timestamp
             WHERE partition_key=1 AND timestamp>=? AND timestamp<=?
             """,
         )

@@ -7,6 +7,7 @@ import auth.secrets as secrets
 import chat_database_connection
 import pika
 import twitch_proxy
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 
 class ClipCreator:
@@ -59,17 +60,29 @@ class ClipCreator:
 
         logging.info(f"Received anomaly at {timestamp} for {broadcaster_id}")
 
-        # Clips can only go back 30 seconds from the time of the call, so we've missed
-        # our opportunity to capture the moment if 30 seconds has gone by
-        if datetime.now().timestamp() - timestamp > 30:
+        # Clips only go back 5 seconds from the time of the call, so we've missed
+        # our opportunity to capture the moment if 5 seconds have gone by
+        if datetime.now().timestamp() - timestamp > 5:
             ch.basic_ack(delivery_tag=method.delivery_tag)
+            logging.warning(
+                f"Anomaly at {timestamp} on {broadcaster_id}'s stream wasn't processed quickly enough"
+            )
             return
 
-        # Clip is not guaranteed to be created. We're not going to bother with confirming
-        # that the clip has been crated at this point in time.
         clip_id = await self.twitch_session.create_clip(broadcaster_id)
 
-        self.database.insert_clip(clip_id, timestamp)
+        async def get_and_store_clip(clip_id, timestamp):
+            id, url, thumbnail = await self.twitch_session.get_clip(clip_id)
+            self.database.insert_clip(timestamp, id, url, thumbnail)
+
+        scheduler = AsyncIOScheduler()
+        scheduler.add_job(
+            get_and_store_clip,
+            "date",
+            run_date="now + 15 seconds",
+            args=(clip_id),
+        )
+        scheduler.start()
 
         ch.basic_ack(delivery_tag=method.delivery_tag)
 

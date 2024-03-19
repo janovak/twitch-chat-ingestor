@@ -194,3 +194,7 @@ class TwitchAPIConnection:
     async def create_clip(self, broadcaster_id):
         response = await self.twitch_session.create_clip(broadcaster_id)
         return response.id
+
+    async def get_clip(self, clip_id):
+        response = await self.twitch_session.get_clips(clip_id=clip_id)
+        return response.id, response.embed_url, response.thumbnail_url
