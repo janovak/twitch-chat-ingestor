@@ -36,10 +36,14 @@ class GetChatsResponse(_message.Message):
     def __init__(self, chats: _Optional[_Iterable[_Union[Chat, _Mapping]]] = ...) -> None: ...
 
 class Clip(_message.Message):
-    __slots__ = ("clip_id",)
+    __slots__ = ("clip_id", "embed_url", "thumbnail_url")
     CLIP_ID_FIELD_NUMBER: _ClassVar[int]
+    EMBED_URL_FIELD_NUMBER: _ClassVar[int]
+    THUMBNAIL_URL_FIELD_NUMBER: _ClassVar[int]
     clip_id: str
-    def __init__(self, clip_id: _Optional[str] = ...) -> None: ...
+    embed_url: str
+    thumbnail_url: str
+    def __init__(self, clip_id: _Optional[str] = ..., embed_url: _Optional[str] = ..., thumbnail_url: _Optional[str] = ...) -> None: ...
 
 class GetClipsRequest(_message.Message):
     __slots__ = ("start", "end")

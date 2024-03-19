@@ -59,19 +59,27 @@ class ClipCreator:
 
         logging.info(f"Received anomaly at {timestamp} for {broadcaster_id}")
 
-        # Clips can only go back 30 seconds from the time of the call, so we've missed
-        # our opportunity to capture the moment if 30 seconds has gone by
-        if datetime.now().timestamp() - timestamp > 30:
+        # Clips only go back 5 seconds from the time of the call, so we've missed
+        # our opportunity to capture the moment if 5 seconds have gone by
+        if datetime.now().timestamp() - timestamp > 5:
             ch.basic_ack(delivery_tag=method.delivery_tag)
+            logging.warning(
+                f"Anomaly at {timestamp} on {broadcaster_id}'s stream wasn't processed quickly enough"
+            )
             return
 
-        # Clip is not guaranteed to be created. We're not going to bother with confirming
-        # that the clip has been crated at this point in time.
+        # Initiate creation of the clip, wait 15 seconds to give Twitch time to publish the clip,
+        # and then fetch the published clip and insert it in the database
+        ch.basic_ack(delivery_tag=method.delivery_tag)
+
         clip_id = await self.twitch_session.create_clip(broadcaster_id)
 
-        self.database.insert_clip(clip_id, timestamp)
+        async def get_and_insert_clip(clip_id, timestamp):
+            await asyncio.sleep(15)  # TODO: Make this delay non blocking
+            id, url, thumbnail = await self.twitch_session.get_clip(clip_id)
+            self.database.insert_clip(timestamp, id, url, thumbnail)
 
-        ch.basic_ack(delivery_tag=method.delivery_tag)
+        await get_and_insert_clip(clip_id, timestamp)
 
 
 async def main():

@@ -10,6 +10,7 @@ from twitchAPI.chat import Chat, ChatMessage
 from twitchAPI.oauth import UserAuthenticator
 from twitchAPI.twitch import Twitch
 from twitchAPI.type import AuthScope, ChatEvent
+from twitchAPI.helper import first
 
 
 def is_valid_message(msg: ChatMessage):
@@ -194,3 +195,7 @@ class TwitchAPIConnection:
     async def create_clip(self, broadcaster_id):
         response = await self.twitch_session.create_clip(broadcaster_id)
         return response.id
+
+    async def get_clip(self, clip_id):
+        clip = await first(self.twitch_session.get_clips(clip_id=clip_id))
+        return clip.id, clip.embed_url, clip.thumbnail_url
