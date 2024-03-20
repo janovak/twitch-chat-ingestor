@@ -70,7 +70,8 @@ class ChatRoomJoiner:
         logging.info(f"{streamer} went offline")
 
         # Delete the streamer from the in-memory set
-        self.online_streamers.remove(streamer)
+        if streamer in self.online_streamers:
+            self.online_streamers.remove(streamer)
         asyncio.run(self.twitch_session.leave_chat_room(streamer))
 
     def start_consuming_streamers(self):

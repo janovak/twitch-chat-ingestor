@@ -1,3 +1,4 @@
+aio-pika==9.4.1
 APScheduler==3.10.4
 pybase62==1.0.0
 cassandra_driver==3.29.0

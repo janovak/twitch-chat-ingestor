@@ -72,7 +72,7 @@ class AnomalyDetector:
                 timestamp - self.last_broadcaster_anomaly[broadcaster_id]
                 > self.broadcaster_anomaly_cooldown
             ):
-                logging.error(f"Anomaly detected in {broadcaster_id}'s chat room")
+                logging.info(f"Anomaly detected in {broadcaster_id}'s chat room")
                 self.last_broadcaster_anomaly[broadcaster_id] = timestamp
 
                 message = json.dumps(
