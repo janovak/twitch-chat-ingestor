@@ -47,7 +47,7 @@ function fetchVideos() {
 function loadEmbeddedUrl(embeddedUrl, thumbnailElement) {
     const iframe = document.createElement('iframe');
     iframe.src = embeddedUrl + "&parent=streamer-summaries.com" + "&autoplay=true";
-    iframe.setAttribute('allow', 'autoplay');
+    iframe.setAttribute('allow', 'autoplay; fullscreen');
 
     // Set iframe size to match thumbnail
     const thumbnailRect = thumbnailElement.getBoundingClientRect();

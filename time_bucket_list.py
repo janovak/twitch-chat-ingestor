@@ -66,14 +66,16 @@ class TimeBucketList:
         # Now update the bucket to reflect that we started a new bucket
         self.current_bucket = bucket
         self.last_bucket_aggregate = self.current_bucket_aggregate
-        logging.error(f"{self.last_bucket_aggregate}")
         self.current_bucket_aggregate = 1
 
     def check_for_anomaly(self):
-        threshold = self.running_variance.standard_deviation() * 5
+        threshold = self.running_variance.standard_deviation() * 15
         anomaly_detected = self.last_bucket_aggregate > threshold
         if anomaly_detected:
-            logging.error(f"{self.last_bucket_aggregate}   {threshold}")
+            ratio = (
+                self.last_bucket_aggregate / self.running_variance.standard_deviation()
+            )
+            logging.error(f"RATIO: {ratio}")
         return anomaly_detected
 
     def append_and_check_for_anomaly(self, timestamp):

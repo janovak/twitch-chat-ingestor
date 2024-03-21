@@ -38,7 +38,7 @@ class TwitchAPIPoller:
     def start_polling_online_streamers(self):
         # Twitch caches are 1 to 3 minutes stale, so it doesn't make sense to poll any more frequently than that
         scheduler = AsyncIOScheduler()
-        scheduler.add_job(self.get_top_streamers, "interval", minutes=1, args=(1,))
+        scheduler.add_job(self.get_top_streamers, "interval", minutes=1, args=(10,))
         scheduler.start()
 
     async def get_all_streamers(self):
@@ -70,6 +70,16 @@ class TwitchAPIPoller:
         tasks = []
         # Groups streamers into lists of 100 and then asyncronously publishes the list to the chat queue
         async for s in streamers:
+            # Bug in create_clip throws a KeyError exception when trying to clip a stream that has clipping disabled
+            # Catch the exception here and skip the stream so we can save resources
+            try:
+                await self.twitch_session.create_clip(s.user_id)
+            except KeyError:
+                logging.info(
+                    f"Skipping {s.user_login} because they have clipping disabled"
+                )
+                continue
+
             streamer_list.append((int(s.user_id), s.user_login))
             counter += 1
             if len(streamer_list) == batch_size:

@@ -14,9 +14,11 @@ from chat_database_utilities import (
 )
 from datetime_helpers import get_month
 from flask import Flask, jsonify, render_template
+from flask_cors import CORS
 from flask_parameter_validation import Query, Route, ValidateParameters
 
 app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "http://www.streamer-summaries.com"}})
 
 
 # Get the ip address of the gRPC server that sits in front of the database

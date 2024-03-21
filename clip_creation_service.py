@@ -1,11 +1,11 @@
 import asyncio
-import concurrent.futures
 import json
 import logging
 from datetime import datetime
+from aio_pika import connect_robust, ExchangeType
+
 import auth.secrets as secrets
 import chat_database_connection
-import pika
 import twitch_proxy
 
 
@@ -15,46 +15,28 @@ class ClipCreator:
 
         self.database = chat_database_connection.DatabaseConnection("chat_data")
 
-        self.message_queue_connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host=secrets.get_cloudamqp_url())
-        )
-        self.channel = self.message_queue_connection.channel()
-
-        self.anomaly_exchange = "anomaly_fanout"
-        self.channel.exchange_declare(self.anomaly_exchange, exchange_type="fanout")
-
-        self.anomaly_queue = "anomaly_queue"
-        self.channel.queue_declare(queue=self.anomaly_queue, durable=True)
-
-        self.channel.queue_bind(
-            exchange=self.anomaly_exchange, queue=self.anomaly_queue
-        )
-
-    def __del__(self):
-        self.shutdown()
-
-    def shutdown(self):
-        self.message_queue_connection.close()
-        self.database.close()
-
     async def authenticate(self):
         await self.twitch_session.authenticate()
 
-    def start_consuming_chats(self):
-        self.channel.basic_qos(prefetch_count=1)
-        self.channel.basic_consume(
-            queue=self.anomaly_queue, on_message_callback=self.handle_chat_message
+    async def start_consuming_chats(self):
+        connection = await connect_robust(
+            "amqp://guest:guest@localhost:5672/", heartbeat=60
         )
-        logging.info("Start consuming anomalies from queue")
-        self.channel.start_consuming()
+        channel = await connection.channel()
 
-    def handle_chat_message(self, ch, method, properties, body):
-        asyncio.run(self.handle_chat_message_async(ch, method, properties, body))
+        await channel.set_qos(prefetch_count=1)
+        exchange = await channel.declare_exchange("anomaly_fanout", ExchangeType.FANOUT)
+        queue = await channel.declare_queue("anomaly_queue", durable=True)
+        await queue.bind(exchange)
 
-    async def handle_chat_message_async(self, ch, method, properties, body):
-        message_fields = json.loads(body.decode())
+        async with queue.iterator() as queue_iter:
+            async for message in queue_iter:
+                async with message.process():
+                    body = json.loads(message.body.decode())
+                    await self.handle_chat_message_async(body)
 
-        broadcaster_id = message_fields["broadcaster_id"]
+    async def handle_chat_message_async(self, message_fields):
+        broadcaster_id = str(message_fields["broadcaster_id"])
         timestamp = message_fields["timestamp"]
 
         logging.info(f"Received anomaly at {timestamp} for {broadcaster_id}")
@@ -62,24 +44,29 @@ class ClipCreator:
         # Clips only go back 5 seconds from the time of the call, so we've missed
         # our opportunity to capture the moment if 5 seconds have gone by
         if datetime.now().timestamp() - timestamp > 5:
-            ch.basic_ack(delivery_tag=method.delivery_tag)
             logging.warning(
                 f"Anomaly at {timestamp} on {broadcaster_id}'s stream wasn't processed quickly enough"
             )
             return
 
-        # Initiate creation of the clip, wait 15 seconds to give Twitch time to publish the clip,
-        # and then fetch the published clip and insert it in the database
-        ch.basic_ack(delivery_tag=method.delivery_tag)
+        # Schedule clip retrieval and insertion as a background task
+        asyncio.create_task(self.retrieve_and_insert_clip(broadcaster_id, timestamp))
 
-        clip_id = await self.twitch_session.create_clip(broadcaster_id)
+    async def retrieve_and_insert_clip(self, broadcaster_id, timestamp):
+        await asyncio.sleep(10)
 
-        async def get_and_insert_clip(clip_id, timestamp):
-            await asyncio.sleep(15)  # TODO: Make this delay non blocking
+        try:
+            clip_id = await self.twitch_session.create_clip(broadcaster_id)
+
+            await asyncio.sleep(15)
+
             id, url, thumbnail = await self.twitch_session.get_clip(clip_id)
             self.database.insert_clip(timestamp, id, url, thumbnail)
+        except Exception as e:
+            logging.error(f"Exception: {e}")
 
-        await get_and_insert_clip(clip_id, timestamp)
+    async def shutdown(self):
+        self.database.close()
 
 
 async def main():
@@ -91,10 +78,11 @@ async def main():
 
     session = ClipCreator()
     await session.authenticate()
+    await session.start_consuming_chats()
 
-    loop = asyncio.get_running_loop()
-    with concurrent.futures.ThreadPoolExecutor() as pool:
-        await loop.run_in_executor(pool, session.start_consuming_chats)
+    # Shutdown gracefully
+    await session.shutdown()
 
 
-asyncio.get_event_loop().run_until_complete(main())
+if __name__ == "__main__":
+    asyncio.run(main())
