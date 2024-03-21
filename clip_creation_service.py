@@ -19,7 +19,9 @@ class ClipCreator:
         await self.twitch_session.authenticate()
 
     async def start_consuming_chats(self):
-        connection = await connect_robust("amqp://guest:guest@localhost:5672/")
+        connection = await connect_robust(
+            "amqp://guest:guest@localhost:5672/", heartbeat=60
+        )
         channel = await connection.channel()
 
         await channel.set_qos(prefetch_count=1)
@@ -37,25 +39,31 @@ class ClipCreator:
         broadcaster_id = str(message_fields["broadcaster_id"])
         timestamp = message_fields["timestamp"]
 
-        logging.error(f"Received anomaly at {timestamp} for {broadcaster_id}")
+        logging.info(f"Received anomaly at {timestamp} for {broadcaster_id}")
 
         # Clips only go back 5 seconds from the time of the call, so we've missed
         # our opportunity to capture the moment if 5 seconds have gone by
-        if datetime.now().timestamp() - timestamp > 50000:
+        if datetime.now().timestamp() - timestamp > 5:
             logging.warning(
                 f"Anomaly at {timestamp} on {broadcaster_id}'s stream wasn't processed quickly enough"
             )
             return
 
-        clip_id = await self.twitch_session.create_clip(broadcaster_id)
-
         # Schedule clip retrieval and insertion as a background task
-        asyncio.create_task(self.retrieve_and_insert_clip(clip_id, timestamp))
+        asyncio.create_task(self.retrieve_and_insert_clip(broadcaster_id, timestamp))
 
-    async def retrieve_and_insert_clip(self, clip_id, timestamp):
-        await asyncio.sleep(15)
-        id, url, thumbnail = await self.twitch_session.get_clip(clip_id)
-        self.database.insert_clip(timestamp, id, url, thumbnail)
+    async def retrieve_and_insert_clip(self, broadcaster_id, timestamp):
+        await asyncio.sleep(10)
+
+        try:
+            clip_id = await self.twitch_session.create_clip(broadcaster_id)
+
+            await asyncio.sleep(15)
+
+            id, url, thumbnail = await self.twitch_session.get_clip(clip_id)
+            self.database.insert_clip(timestamp, id, url, thumbnail)
+        except Exception as e:
+            logging.error(f"Exception: {e}")
 
     async def shutdown(self):
         self.database.close()

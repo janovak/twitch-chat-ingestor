@@ -5,6 +5,7 @@ from collections import defaultdict
 import auth.secrets as secrets
 import pika
 from time_bucket_list import TimeBucketList
+import re
 
 
 class AnomalyDetector:
@@ -58,6 +59,17 @@ class AnomalyDetector:
             f"Message, {message_fields['message_id']}, received in {broadcaster_id}'s chat room"
         )
 
+        def starts_with_valid_command(s):
+            # '!' followed by an alphanumeric string and then any other character
+            pattern = r"^![a-zA-Z0-9]+.*$"
+            return bool(re.match(pattern, s))
+
+        # Don't count commands in anomaly detection. We don't want to clip streamers doing giveaways, predictions, etc.
+        message_text = json.loads(message_fields["message"])
+        if starts_with_valid_command(message_text["text"]):
+            ch.basic_ack(delivery_tag=method.delivery_tag)
+            return
+
         timestamp = message_fields["timestamp"] // 1000
         self.anomaly_detection_per_broadcaster[broadcaster_id].append(timestamp)
 
@@ -72,7 +84,7 @@ class AnomalyDetector:
                 timestamp - self.last_broadcaster_anomaly[broadcaster_id]
                 > self.broadcaster_anomaly_cooldown
             ):
-                logging.info(f"Anomaly detected in {broadcaster_id}'s chat room")
+                logging.error(f"Anomaly detected in {broadcaster_id}'s chat room")
                 self.last_broadcaster_anomaly[broadcaster_id] = timestamp
 
                 message = json.dumps(
