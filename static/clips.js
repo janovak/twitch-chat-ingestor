@@ -9,7 +9,7 @@ function fetchVideos() {
     const twentyFourHoursAgoISODate = twentyFourHoursAgoDate.toISOString();
 
     // Construct the API URL with start and stop timestamps
-    const apiUrl = `https://streamer-summaries.com:443/v1.0/clip?start=${currentISODate}&end=${twentyFourHoursAgoISODate}`;
+    const apiUrl = `https://www.streamer-summaries.com:443/v1.0/clip?start=${currentISODate}&end=${twentyFourHoursAgoISODate}`;
     fetch(apiUrl)
         .then(response => response.json())
         .then(data => {
@@ -46,7 +46,7 @@ function fetchVideos() {
 
 function loadEmbeddedUrl(embeddedUrl, thumbnailElement) {
     const iframe = document.createElement('iframe');
-    iframe.src = embeddedUrl + "&parent=streamer-summaries.com" + "&autoplay=true";
+    iframe.src = embeddedUrl + "&parent=www.streamer-summaries.com" + "&autoplay=true";
     iframe.setAttribute('allow', 'autoplay; fullscreen');
 
     // Set iframe size to match thumbnail
@@ -57,3 +57,4 @@ function loadEmbeddedUrl(embeddedUrl, thumbnailElement) {
     // Replace the thumbnail with the iframe
     thumbnailElement.parentNode.replaceChild(iframe, thumbnailElement);
 }
+
