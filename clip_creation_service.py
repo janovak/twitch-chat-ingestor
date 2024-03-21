@@ -53,7 +53,7 @@ class ClipCreator:
         asyncio.create_task(self.retrieve_and_insert_clip(broadcaster_id, timestamp))
 
     async def retrieve_and_insert_clip(self, broadcaster_id, timestamp):
-        await asyncio.sleep(10)
+        await asyncio.sleep(5)
 
         try:
             clip_id = await self.twitch_session.create_clip(broadcaster_id)

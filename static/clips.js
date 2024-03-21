@@ -14,8 +14,9 @@ function fetchVideos() {
         .then(response => response.json())
         .then(data => {
             const thumbnailsContainer = document.getElementById('videoContainer');
+            const thumbnails = [];
 
-            // Display thumbnails
+            // Collect thumbnails
             data.clips.forEach(thumbnailData => {
                 const thumbnailUrl = thumbnailData.thumbnail_url;
                 const embeddedUrl = thumbnailData.embed_url;
@@ -35,10 +36,19 @@ function fetchVideos() {
                         // Load embedded URL when thumbnail is clicked
                         loadEmbeddedUrl(embeddedUrl, thumbnailElement);
                     });
-                    thumbnailsContainer.appendChild(thumbnailElement);
 
+                    // Push the thumbnail element and its timestamp to the array
+                    thumbnails.push({ element: thumbnailElement, timestamp: thumbnailData.timestamp });
                 };
                 img.src = thumbnailUrl; // Start loading the image
+            });
+
+            // Sort thumbnails by timestamp
+            thumbnails.sort((a, b) => a.timestamp - b.timestamp);
+
+            // Append sorted thumbnails to the container
+            thumbnails.forEach(thumbnail => {
+                thumbnailsContainer.appendChild(thumbnail.element);
             });
         })
         .catch(error => console.error('Error fetching thumbnails:', error));
@@ -57,4 +67,3 @@ function loadEmbeddedUrl(embeddedUrl, thumbnailElement) {
     // Replace the thumbnail with the iframe
     thumbnailElement.parentNode.replaceChild(iframe, thumbnailElement);
 }
-

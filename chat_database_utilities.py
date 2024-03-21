@@ -19,6 +19,7 @@ def serialize_chat_database_rows(list_of_chats):
 
 def serialize_clip_database_row(clip):
     return {
+        "timestamp": clip.timestamp,
         "embed_url": clip.embed_url,
         "thumbnail_url": clip.thumbnail_url,
     }

@@ -31,9 +31,10 @@ message GetChatsResponse {
 }
 
 message Clip {
-    string clip_id = 1;
-    string embed_url = 2;
-    string thumbnail_url = 3;
+    uint64 timestamp = 1;
+    string clip_id = 2;
+    string embed_url = 3;
+    string thumbnail_url = 4;
 }
 
 message GetClipsRequest {

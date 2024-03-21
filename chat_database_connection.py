@@ -139,7 +139,7 @@ class DatabaseConnection:
 
         statement = self.session.prepare(
             """
-            SELECT clip_id, embed_url, thumbnail_url FROM clips_by_timestamp
+            SELECT timestamp, clip_id, embed_url, thumbnail_url FROM clips_by_timestamp
             WHERE partition_key=1 AND timestamp>=? AND timestamp<=?
             """,
         )
