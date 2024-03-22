@@ -43,11 +43,14 @@ class ClipCreator:
 
         # Clips only go back 5 seconds from the time of the call, so we've missed
         # our opportunity to capture the moment if 5 seconds have gone by
+        """
         if datetime.now().timestamp() - timestamp > 5:
             logging.warning(
                 f"Anomaly at {timestamp} on {broadcaster_id}'s stream wasn't processed quickly enough"
             )
             return
+        """
+        logging.info(f"Seconds since anomaly: {datetime.now().timestamp() - timestamp}")
 
         # Schedule clip retrieval and insertion as a background task
         asyncio.create_task(self.retrieve_and_insert_clip(broadcaster_id, timestamp))

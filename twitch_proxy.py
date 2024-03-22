@@ -140,11 +140,11 @@ class TwitchAPIConnection:
 
     async def join_chat_room(self, streamer_name):
         await self.chat.join_room(streamer_name)
-        logging.info(f"Joined {streamer_name}'s chat room")
+        logging.error(f"Joined {streamer_name}'s chat room")
 
     async def leave_chat_room(self, streamer_name):
         await self.chat.leave_room(streamer_name)
-        logging.info(f"Left {streamer_name}'s chat room")
+        logging.error(f"Left {streamer_name}'s chat room")
 
     async def on_message(self, msg: ChatMessage):
         if not is_valid_message(msg):

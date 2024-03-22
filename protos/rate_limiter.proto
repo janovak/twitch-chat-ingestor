@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "twitchchatingestor.ratelimiter";
+option java_outer_classname = "RateLimiterProto";
+option objc_class_prefix = "rl";
+
+package ratelimiter;
+
+service RateLimiter {
+  rpc ConsumeToken(ConsumeTokenRequest) returns (ConsumeTokenResponse) {}
+}
+
+message ConsumeTokenRequest {
+    uint32 id = 1;
+    uint64 timestamp = 2;
+}
+
+message ConsumeTokenResponse {
+    bool success = 1;
+}

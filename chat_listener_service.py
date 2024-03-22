@@ -2,11 +2,21 @@ import asyncio
 import concurrent.futures
 import json
 import logging
+from datetime import datetime
 
 import auth.secrets as secrets
 import pika
 import redis
 import twitch_proxy
+
+import gen.grpc.rate_limiter.rate_limiter_pb2 as rate_limiter_pb2
+import gen.grpc.rate_limiter.rate_limiter_pb2_grpc as rate_limiter_pb2_grpc
+import grpc
+
+
+# gRPC client to interact with rate limiter server
+rate_limiter_channel = grpc.insecure_channel(f"localhost:50051")
+rate_limiter_client = rate_limiter_pb2_grpc.RateLimiterStub(rate_limiter_channel)
 
 
 class ChatRoomJoiner:
@@ -83,38 +93,54 @@ class ChatRoomJoiner:
         logging.info("Start consuming streamers from queue")
         self.channel.start_consuming()
 
+    async def check_rate_limiter_with_retry(self, timeout):
+        while True:
+            if timeout == 0:
+                logging.warning(f"Rate limiter check timing out.")
+                return False
+
+            try:
+                # Requests are shared between all user ids, so just use 0 for the id
+                response = rate_limiter_client.ConsumeToken(
+                    rate_limiter_pb2.ConsumeTokenRequest(
+                        timestamp=int(datetime.now().timestamp()),
+                        id=0,
+                    )
+                )
+                if response.success:
+                    return True  # Success
+
+            except grpc.RpcError as rpc_error:
+                status_code = rpc_error.code()
+                details = rpc_error.details()
+                logging.error(f"gRPC error: {status_code} {details}")
+
+            timeout -= 1
+            await asyncio.sleep(1)  # Wait for 1 second before retrying
+
     def handle_live_streamers(self, ch, method, properties, body):
         asyncio.run(self.handle_live_streamers_async(ch, method, properties, body))
 
     async def handle_live_streamers_async(self, ch, method, properties, body):
-        streamers = json.loads(body.decode())
+        _, user_login = json.loads(body.decode())
 
-        logging.info(f"Received {len(streamers)} live streamers")
+        logging.info(f"{user_login} is currently live")
 
-        if not streamers:
-            ch.basic_ack(delivery_tag=method.delivery_tag)
-            return
+        # Add streamer to the redis cache, in-memory cache, and join their chat room if they just went live.
+        if user_login not in self.online_streamers:
+            logging.error(f"{user_login} just came online")
 
-        tasks = []
-        # Add streamers that just went live to the redis and in-memory caches as well as join their
-        # chat room. Refresh all live streamers TTL. Streams that go offline won't be refreshed in the cashe,
-        # and after a few minutes they will expire and be removed from the cache.
-        for _, user_login in streamers:
-            if user_login not in self.online_streamers:
-                logging.info(f"{user_login} just came online")
-
-                tasks.append(
-                    asyncio.create_task(self.twitch_session.join_chat_room(user_login))
-                )
-
+            limit_exceeded = not await self.check_rate_limiter_with_retry(300)
+            if not limit_exceeded:
                 self.redis_cache.set(user_login, "")
                 self.online_streamers.add(user_login)
+                await self.twitch_session.join_chat_room(user_login)
 
-            self.redis_cache.expire(user_login, 300)
+        # Refresh the streamer's TTL. Streams that go offline won't be refreshed in the cashe,
+        # and after a few minutes they will expire and be removed from the cache.
+        self.redis_cache.expire(user_login, 300)
 
         ch.basic_ack(delivery_tag=method.delivery_tag)
-
-        await asyncio.gather(*tasks)
 
 
 async def main():

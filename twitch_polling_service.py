@@ -38,7 +38,7 @@ class TwitchAPIPoller:
     def start_polling_online_streamers(self):
         # Twitch caches are 1 to 3 minutes stale, so it doesn't make sense to poll any more frequently than that
         scheduler = AsyncIOScheduler()
-        scheduler.add_job(self.get_top_streamers, "interval", minutes=1, args=(10,))
+        scheduler.add_job(self.get_top_streamers, "interval", minutes=1, args=(100,))
         scheduler.start()
 
     async def get_all_streamers(self):
@@ -53,9 +53,20 @@ class TwitchAPIPoller:
         batch_size = min(batch_size, 100)
         streamers = await self.twitch_session.get_online_streamers(batch_size)
 
-        # Publishes a JSON list of streamer Ids to the chat queue. The list has a maximum of batch_size Ids
-        async def publish_batch(ids):
-            message = json.dumps(ids)
+        counter = 0
+        async for streamer in streamers:
+            # Bug in create_clip throws a KeyError exception when trying to clip a stream that has clipping disabled
+            # Catch the exception here and skip the stream so we can save resources
+            try:
+                pass
+                # await self.twitch_session.create_clip(s.user_id)
+            except KeyError:
+                logging.info(
+                    f"Skipping {streamer.user_login} because they have clipping disabled"
+                )
+                continue
+
+            message = json.dumps((int(streamer.user_id), streamer.user_login))
             self.channel.basic_publish(
                 exchange=self.broadcaster_exchange,
                 routing_key="",
@@ -64,38 +75,9 @@ class TwitchAPIPoller:
                     delivery_mode=pika.DeliveryMode.Persistent
                 ),
             )
-
-        counter = 0
-        streamer_list = []
-        tasks = []
-        # Groups streamers into lists of 100 and then asyncronously publishes the list to the chat queue
-        async for s in streamers:
-            # Bug in create_clip throws a KeyError exception when trying to clip a stream that has clipping disabled
-            # Catch the exception here and skip the stream so we can save resources
-            try:
-                await self.twitch_session.create_clip(s.user_id)
-            except KeyError:
-                logging.info(
-                    f"Skipping {s.user_login} because they have clipping disabled"
-                )
-                continue
-
-            streamer_list.append((int(s.user_id), s.user_login))
             counter += 1
-            if len(streamer_list) == batch_size:
-                tasks.append(asyncio.create_task(publish_batch(streamer_list.copy())))
-                streamer_list.clear()
             if counter == batch_size:
-                break
-
-        # Publish any remaining streamers if the total count is not a multiple of batch_size
-        if streamer_list:
-            counter += len(streamer_list)
-            tasks.append(asyncio.create_task(publish_batch(streamer_list)))
-
-        await asyncio.gather(*tasks)
-
-        logging.info(f"Published {counter} Ids in batches of {batch_size}")
+                return
 
 
 async def main():
