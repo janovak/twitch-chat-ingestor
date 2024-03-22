@@ -8,51 +8,53 @@ function fetchVideos() {
     const twentyFourHoursAgoDate = new Date(currentDate.getTime() - (24 * 60 * 60 * 1000));
     const twentyFourHoursAgoISODate = twentyFourHoursAgoDate.toISOString();
 
-    // Construct the API URL with start and stop timestamps
     const apiUrl = `https://www.streamer-summaries.com:443/v1.0/clip?start=${currentISODate}&end=${twentyFourHoursAgoISODate}`;
+
     fetch(apiUrl)
         .then(response => response.json())
         .then(data => {
             const thumbnailsContainer = document.getElementById('videoContainer');
-            const thumbnails = [];
+            const thumbnailPromises = [];
 
-            // Collect thumbnails
             data.clips.forEach(thumbnailData => {
                 const thumbnailUrl = thumbnailData.thumbnail_url;
                 const embeddedUrl = thumbnailData.embed_url;
+                const timestamp = thumbnailData.timestamp;
 
-                // Create a new image element to get dimensions
-                const img = new Image();
-                img.onload = function () {
-                    const thumbnailElement = document.createElement('img');
-                    thumbnailElement.src = thumbnailUrl;
-                    thumbnailElement.style.cursor = 'pointer'; // Add pointer cursor
+                const promise = new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = function () {
+                        const thumbnailElement = document.createElement('img');
+                        thumbnailElement.src = thumbnailUrl;
+                        thumbnailElement.style.cursor = 'pointer';
+                        thumbnailElement.style.width = img.naturalWidth + 'px';
+                        thumbnailElement.style.height = img.naturalHeight + 'px';
 
-                    // Set width and height based on image dimensions
-                    thumbnailElement.style.width = img.naturalWidth + 'px';
-                    thumbnailElement.style.height = img.naturalHeight + 'px';
+                        thumbnailElement.addEventListener('click', () => {
+                            loadEmbeddedUrl(embeddedUrl, thumbnailElement);
+                        });
 
-                    thumbnailElement.addEventListener('click', () => {
-                        // Load embedded URL when thumbnail is clicked
-                        loadEmbeddedUrl(embeddedUrl, thumbnailElement);
+                        resolve({ element: thumbnailElement, timestamp: timestamp });
+                    };
+                    img.onerror = reject;
+                    img.src = thumbnailUrl;
+                });
+
+                thumbnailPromises.push(promise);
+            });
+
+            Promise.all(thumbnailPromises)
+                .then(thumbnails => {
+                    thumbnails.sort((a, b) => b.timestamp - a.timestamp);
+                    thumbnails.forEach(thumbnail => {
+                        thumbnailsContainer.appendChild(thumbnail.element);
                     });
-
-                    // Push the thumbnail element and its timestamp to the array
-                    thumbnails.push({ element: thumbnailElement, timestamp: thumbnailData.timestamp });
-                };
-                img.src = thumbnailUrl; // Start loading the image
-            });
-
-            // Sort thumbnails by timestamp
-            thumbnails.sort((a, b) => a.timestamp - b.timestamp);
-
-            // Append sorted thumbnails to the container
-            thumbnails.forEach(thumbnail => {
-                thumbnailsContainer.appendChild(thumbnail.element);
-            });
+                })
+                .catch(error => console.error('Error loading thumbnails:', error));
         })
         .catch(error => console.error('Error fetching thumbnails:', error));
 }
+
 
 function loadEmbeddedUrl(embeddedUrl, thumbnailElement) {
     const iframe = document.createElement('iframe');
