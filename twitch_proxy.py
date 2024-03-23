@@ -89,6 +89,9 @@ class TwitchAPIConnection:
     def __init__(self):
         self.twitch_session = None
         self.chat = None
+        self.write_lock = asyncio.Lock()
+        self.chat_rooms_joined = 0
+        self.messages_sent = 0
 
         self.message_queue_connection = pika.BlockingConnection(
             pika.ConnectionParameters(host=secrets.get_cloudamqp_url())
@@ -139,12 +142,18 @@ class TwitchAPIConnection:
         self.chat.start()
 
     async def join_chat_room(self, streamer_name):
-        await self.chat.join_room(streamer_name)
-        logging.error(f"Joined {streamer_name}'s chat room")
+        async with self.write_lock:
+            await self.chat.join_room(streamer_name)
+            self.chat_rooms_joined += 1
+            logging.error(f"joined: {self.chat_rooms_joined}")
+            logging.info(f"Joined {streamer_name}'s chat room")
 
     async def leave_chat_room(self, streamer_name):
-        await self.chat.leave_room(streamer_name)
-        logging.error(f"Left {streamer_name}'s chat room")
+        async with self.write_lock:
+            await self.chat.leave_room(streamer_name)
+            self.chat_rooms_joined -= 1
+            logging.error(f"left: {self.chat_rooms_joined}")
+            # logging.error(f"Left {streamer_name}'s chat room")
 
     async def on_message(self, msg: ChatMessage):
         if not is_valid_message(msg):
@@ -152,6 +161,10 @@ class TwitchAPIConnection:
                 "Skipping message as it does not contain the necessary fields"
             )
             return
+
+        self.messages_sent += 1
+        if self.messages_sent % 1000 == 0:
+            logging.error(f"messages sent: {self.messages_sent // 1000}")
 
         # Extract relevant fields from the message and serialize it to JSON
         message_fields = {
@@ -187,6 +200,7 @@ class TwitchAPIConnection:
 
     async def get_online_streamers(self, batch_size):
         logging.info(f"Retrieving currently live streamers")
+        batch_size = min(batch_size, 100)
         streamers = self.twitch_session.get_streams(
             first=batch_size, stream_type="live"
         )

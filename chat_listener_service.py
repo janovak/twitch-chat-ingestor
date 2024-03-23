@@ -1,21 +1,18 @@
 import asyncio
-import concurrent.futures
 import json
 import logging
 from datetime import datetime
 
 import auth.secrets as secrets
-import pika
-import redis
+import aio_pika
+import redis.asyncio as redis
 import twitch_proxy
 
 import gen.grpc.rate_limiter.rate_limiter_pb2 as rate_limiter_pb2
 import gen.grpc.rate_limiter.rate_limiter_pb2_grpc as rate_limiter_pb2_grpc
 import grpc
 
-
-# gRPC client to interact with rate limiter server
-rate_limiter_channel = grpc.insecure_channel(f"localhost:50051")
+rate_limiter_channel = grpc.insecure_channel("localhost:50051")
 rate_limiter_client = rate_limiter_pb2_grpc.RateLimiterStub(rate_limiter_channel)
 
 
@@ -29,69 +26,68 @@ class ChatRoomJoiner:
         # enough for now
         self.online_streamers = set()
 
-        # Keeps track of online streamers
-        self.redis_cache = redis.Redis(
-            host=secrets.get_redis_host_url(),
-            port=secrets.get_redis_host_port(),
-            password=secrets.get_redis_host_password(),
-            db=0,
+        self.redis_cache = redis.from_url(
+            "redis://:"
+            + secrets.get_redis_host_password()
+            + "@"
+            + secrets.get_redis_host_url()
+            + ":"
+            + str(secrets.get_redis_host_port())
+            + "/0"
         )
 
-        # Register callback to fire when a key expiers in the cache. Note that this gets called
-        # at redis's convenience and not necessarily immediately when the key expires
-        pubsub = self.redis_cache.pubsub()
-        pubsub.psubscribe(
-            **{"__keyevent@0__:expired": self.streamer_went_offline_callback}
-        )
-        pubsub.run_in_thread(sleep_time=1)
-
-        self.message_queue_connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host=secrets.get_cloudamqp_url())
-        )
-        self.channel = self.message_queue_connection.channel()
-
-        # The broadcaster exchange is updated with all live streamers periodically. We bind our own
-        # queue to the exchange to listen to all those messages.
-        self.broadcaster_exchange = "broadcaster_fanout"
-        self.channel.exchange_declare(self.broadcaster_exchange, exchange_type="fanout")
-
-        self.broadcaster_queue = "join_broadcaster_chat_queue"
-        self.channel.queue_declare(queue=self.broadcaster_queue, durable=True)
-
-        self.channel.queue_bind(
-            exchange=self.broadcaster_exchange, queue=self.broadcaster_queue
-        )
-
-    def __del__(self):
-        self.shutdown()
-
-    def shutdown(self):
-        self.message_queue_connection.close()
-        self.redis_cache.close()
-        self.twitch_session.close()
+        self.connection = None
+        self.channel = None
 
     async def initialize_twitch(self):
         await self.twitch_session.authenticate()
         await self.twitch_session.initialize_chat()
 
-    def streamer_went_offline_callback(self, message):
+    async def handle_expiring_keys(self):
+        pubsub = self.redis_cache.pubsub()
+        await pubsub.psubscribe("__keyevent@0__:expired")
+        events = pubsub.listen()
+
+        # Skip the first message since it's not an actual streamer
+        async for message in events:
+            break
+
+        async for message in events:
+            # Should await these tasks, but not critical. Awaiting will just help with a graceful shutdown
+            asyncio.create_task(self.streamer_went_offline_callback(message))
+
+    async def streamer_went_offline_callback(self, message):
         streamer = message["data"].decode()
 
         logging.info(f"{streamer} went offline")
 
-        # Delete the streamer from the in-memory set
         if streamer in self.online_streamers:
             self.online_streamers.remove(streamer)
-        asyncio.run(self.twitch_session.leave_chat_room(streamer))
 
-    def start_consuming_streamers(self):
-        self.channel.basic_qos(prefetch_count=1)
-        self.channel.basic_consume(
-            queue=self.broadcaster_queue,
-            on_message_callback=self.handle_live_streamers,
+        await self.twitch_session.leave_chat_room(streamer)
+
+    async def start_consuming_streamers(self):
+        connection = await aio_pika.connect_robust(
+            "amqp://guest:guest@localhost:5672/", heartbeat=60
         )
-        logging.info("Start consuming streamers from queue")
-        self.channel.start_consuming()
+        channel = await connection.channel()
+
+        # Declare the exchange and queue
+        broadcaster_exchange = await channel.declare_exchange(
+            "broadcaster_fanout", aio_pika.ExchangeType.FANOUT
+        )
+        broadcaster_queue = await channel.declare_queue(
+            "join_broadcaster_chat_queue", durable=True
+        )
+
+        await broadcaster_queue.bind(broadcaster_exchange)
+
+        await channel.set_qos(prefetch_count=1)
+
+        async with broadcaster_queue.iterator() as queue_iter:
+            async for message in queue_iter:
+                async with message.process():
+                    await self.handle_live_streamers(message)
 
     async def check_rate_limiter_with_retry(self, timeout):
         while True:
@@ -100,7 +96,6 @@ class ChatRoomJoiner:
                 return False
 
             try:
-                # Requests are shared between all user ids, so just use 0 for the id
                 response = rate_limiter_client.ConsumeToken(
                     rate_limiter_pb2.ConsumeTokenRequest(
                         timestamp=int(datetime.now().timestamp()),
@@ -108,7 +103,7 @@ class ChatRoomJoiner:
                     )
                 )
                 if response.success:
-                    return True  # Success
+                    return True
 
             except grpc.RpcError as rpc_error:
                 status_code = rpc_error.code()
@@ -116,31 +111,23 @@ class ChatRoomJoiner:
                 logging.error(f"gRPC error: {status_code} {details}")
 
             timeout -= 1
-            await asyncio.sleep(1)  # Wait for 1 second before retrying
+            await asyncio.sleep(1)
 
-    def handle_live_streamers(self, ch, method, properties, body):
-        asyncio.run(self.handle_live_streamers_async(ch, method, properties, body))
-
-    async def handle_live_streamers_async(self, ch, method, properties, body):
-        _, user_login = json.loads(body.decode())
+    async def handle_live_streamers(self, message: aio_pika.IncomingMessage):
+        _, user_login = json.loads(message.body.decode())
 
         logging.info(f"{user_login} is currently live")
 
-        # Add streamer to the redis cache, in-memory cache, and join their chat room if they just went live.
         if user_login not in self.online_streamers:
-            logging.error(f"{user_login} just came online")
+            logging.info(f"{user_login} just came online")
 
             limit_exceeded = not await self.check_rate_limiter_with_retry(300)
             if not limit_exceeded:
-                self.redis_cache.set(user_login, "")
                 self.online_streamers.add(user_login)
+                await self.redis_cache.set(user_login, "")
                 await self.twitch_session.join_chat_room(user_login)
 
-        # Refresh the streamer's TTL. Streams that go offline won't be refreshed in the cashe,
-        # and after a few minutes they will expire and be removed from the cache.
-        self.redis_cache.expire(user_login, 300)
-
-        ch.basic_ack(delivery_tag=method.delivery_tag)
+        await self.redis_cache.expire(user_login, 300)
 
 
 async def main():
@@ -152,10 +139,10 @@ async def main():
 
     joiner = ChatRoomJoiner()
     await joiner.initialize_twitch()
+    asyncio.create_task(joiner.handle_expiring_keys())
 
-    loop = asyncio.get_running_loop()
-    with concurrent.futures.ThreadPoolExecutor() as pool:
-        await loop.run_in_executor(pool, joiner.start_consuming_streamers)
+    await joiner.start_consuming_streamers()
 
 
-asyncio.get_event_loop().run_until_complete(main())
+if __name__ == "__main__":
+    asyncio.run(main())

@@ -38,7 +38,7 @@ class TwitchAPIPoller:
     def start_polling_online_streamers(self):
         # Twitch caches are 1 to 3 minutes stale, so it doesn't make sense to poll any more frequently than that
         scheduler = AsyncIOScheduler()
-        scheduler.add_job(self.get_top_streamers, "interval", minutes=1, args=(100,))
+        scheduler.add_job(self.get_top_streamers, "interval", minutes=2, args=(50,))
         scheduler.start()
 
     async def get_all_streamers(self):
@@ -50,7 +50,6 @@ class TwitchAPIPoller:
         await self.get_online_streamers(n)
 
     async def get_online_streamers(self, batch_size):
-        batch_size = min(batch_size, 100)
         streamers = await self.twitch_session.get_online_streamers(batch_size)
 
         counter = 0
@@ -75,6 +74,7 @@ class TwitchAPIPoller:
                     delivery_mode=pika.DeliveryMode.Persistent
                 ),
             )
+
             counter += 1
             if counter == batch_size:
                 return
