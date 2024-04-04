@@ -5,11 +5,11 @@ document.addEventListener("DOMContentLoaded", function () {
 function fetchVideos() {
     let currentDate = new Date();
     const currentISODate = currentDate.toISOString();
-    const twentyFourHoursAgoDate = new Date(currentDate.getTime() - (24 * 60 * 60 * 1000));
-    const twentyFourHoursAgoISODate = twentyFourHoursAgoDate.toISOString();
+    const oneWeekAgoDate = new Date(currentDate.getTime() - (7 * 24 * 60 * 60 * 1000));
+    const oneWeekAgoISODate = oneWeekAgoDate.toISOString();
 
-    const apiUrl = `https://www.streamer-summaries.com:443/v1.0/clip?start=${currentISODate}&end=${twentyFourHoursAgoISODate}`;
-
+    // Construct the API URL with start and stop timestamps
+    const apiUrl = `https://www.streamer-summaries.com:443/v1.0/clip?start=${currentISODate}&end=${oneWeekAgoISODate}`;
     fetch(apiUrl)
         .then(response => response.json())
         .then(data => {

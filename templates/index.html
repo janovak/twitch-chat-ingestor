@@ -5,10 +5,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='clip_list.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='about.css') }}">
     <title>Stream Summaries</title>
 </head>
 
 <body>
+    <div class="centered-button">
+        <button class="hover-button">About</button>
+        <div class="panel">
+            <p>There are several systems that work together to create these clips.</p>
+
+            <ul>
+                <li>One polls Twitch's streams API every couple minutes to determine the most popular streamers who
+                    are currently live.</li>
+                <li>A second joins all the chat rooms of those streamers.</li>
+                <li>Another aggregates the chat messages from those chat rooms to detect spikes in the number of chat
+                    messages.</li>
+                <li>These spikes are then sent to the final service to capture the moment via Twitch's clips API.
+                </li>
+            </ul>
+        </div>
+    </div>
+
     <div id="videoContainer"></div>
 
     <script src="{{ url_for('static', filename='clips.js') }}"></script>
