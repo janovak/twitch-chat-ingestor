@@ -49,7 +49,7 @@ def serve():
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     rate_limiter_pb2_grpc.add_RateLimiterServicer_to_server(
-        RateLimiterServicer(limit=10), server
+        RateLimiterServicer(limit=20), server
     )
     server.add_insecure_port("[::]:50051")
     server.start()

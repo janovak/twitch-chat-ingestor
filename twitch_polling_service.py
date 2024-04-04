@@ -25,6 +25,8 @@ class TwitchAPIPoller:
         self.broadcaster_exchange = "broadcaster_fanout"
         self.channel.exchange_declare(self.broadcaster_exchange, exchange_type="fanout")
 
+        self.streamer_allows_clipping = {}
+
     def __del__(self):
         self.shutdown()
 
@@ -38,7 +40,7 @@ class TwitchAPIPoller:
     def start_polling_online_streamers(self):
         # Twitch caches are 1 to 3 minutes stale, so it doesn't make sense to poll any more frequently than that
         scheduler = AsyncIOScheduler()
-        scheduler.add_job(self.get_top_streamers, "interval", minutes=2, args=(50,))
+        scheduler.add_job(self.get_top_streamers, "interval", minutes=2, args=(40,))
         scheduler.start()
 
     async def get_all_streamers(self):
@@ -57,15 +59,22 @@ class TwitchAPIPoller:
             # Bug in create_clip throws a KeyError exception when trying to clip a stream that has clipping disabled
             # Catch the exception here and skip the stream so we can save resources
             try:
-                pass
-                # await self.twitch_session.create_clip(s.user_id)
-            except KeyError:
-                logging.info(
-                    f"Skipping {streamer.user_login} because they have clipping disabled"
+                if streamer.user_id not in self.streamer_allows_clipping:
+                    await self.twitch_session.create_clip(streamer.user_id)
+                    self.streamer_allows_clipping[streamer.user_id] = True
+                elif not self.streamer_allows_clipping[streamer.user_id]:
+                    logging.critical(
+                        f"Skipping {streamer.user_login} because we know they have clipping disabled."
+                    )
+                    continue
+            except Exception as e:
+                self.streamer_allows_clipping[streamer.user_id] = False
+                logging.critical(
+                    f"Skipping {streamer.user_login} because they have clipping disabled. Error: {e}"
                 )
                 continue
 
-            message = json.dumps((int(streamer.user_id), streamer.user_login))
+            message = json.dumps((int(streamer.user_id), streamer.user_login, counter))
             self.channel.basic_publish(
                 exchange=self.broadcaster_exchange,
                 routing_key="",

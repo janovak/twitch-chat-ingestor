@@ -64,7 +64,9 @@ class ChatRoomJoiner:
         if streamer in self.online_streamers:
             self.online_streamers.remove(streamer)
 
-        await self.twitch_session.leave_chat_room(streamer)
+        # TODO await this task during shutdown
+        # real fix it to patch pytwitchapi by adding timeout to leave_room
+        asyncio.create_task(self.twitch_session.leave_chat_room(streamer))
 
     async def start_consuming_streamers(self):
         connection = await aio_pika.connect_robust(
@@ -94,6 +96,9 @@ class ChatRoomJoiner:
             if timeout == 0:
                 logging.warning(f"Rate limiter check timing out.")
                 return False
+            elif timeout < 0:
+                logging.warning(f"oops")
+                return False
 
             try:
                 response = rate_limiter_client.ConsumeToken(
@@ -114,14 +119,14 @@ class ChatRoomJoiner:
             await asyncio.sleep(1)
 
     async def handle_live_streamers(self, message: aio_pika.IncomingMessage):
-        _, user_login = json.loads(message.body.decode())
+        _, user_login, rank = json.loads(message.body.decode())
 
         logging.info(f"{user_login} is currently live")
 
-        if user_login not in self.online_streamers:
-            logging.info(f"{user_login} just came online")
+        if user_login not in self.online_streamers and rank < 20:
+            logging.error(f"{user_login} just came online")
 
-            limit_exceeded = not await self.check_rate_limiter_with_retry(300)
+            limit_exceeded = not await self.check_rate_limiter_with_retry(35)
             if not limit_exceeded:
                 self.online_streamers.add(user_login)
                 await self.redis_cache.set(user_login, "")
@@ -133,12 +138,13 @@ class ChatRoomJoiner:
 async def main():
     logging.basicConfig(
         filemode="w",
-        level=logging.WARNING,
+        level=logging.CRITICAL,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
     joiner = ChatRoomJoiner()
     await joiner.initialize_twitch()
+    await joiner.redis_cache.flushall()
     asyncio.create_task(joiner.handle_expiring_keys())
 
     await joiner.start_consuming_streamers()

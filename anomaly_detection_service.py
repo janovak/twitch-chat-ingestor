@@ -36,6 +36,8 @@ class AnomalyDetector:
         self.broadcaster_anomaly_cooldown = 30
         self.last_broadcaster_anomaly = defaultdict(int)
 
+        self.total_message_count = 0
+
     def __del__(self):
         self.shutdown()
 
@@ -54,6 +56,11 @@ class AnomalyDetector:
         message_fields = json.loads(body.decode())
 
         broadcaster_id = message_fields["broadcaster_id"]
+
+        if self.total_message_count % 100000 == 0:
+            logging.critical(f"Messages received {self.total_message_count}")
+
+        self.total_message_count += 1
 
         logging.info(
             f"Message, {message_fields['message_id']}, received in {broadcaster_id}'s chat room"
