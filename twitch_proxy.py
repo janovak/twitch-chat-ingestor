@@ -172,6 +172,7 @@ class TwitchAPIConnection:
     async def leave_chat_room(self, streamer_name):
 
         async with self.write_lock:
+
             try:
                 await self.chat.leave_room(streamer_name)
             except asyncio.exceptions.CancelledError as e:
