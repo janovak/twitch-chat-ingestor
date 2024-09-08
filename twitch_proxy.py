@@ -2,7 +2,6 @@ import asyncio
 import json
 import logging
 import uuid
-import psutil
 import auth.secrets as secrets
 import pika
 import utilities
@@ -145,8 +144,6 @@ class TwitchAPIConnection:
 
     async def join_chat_room(self, streamer_name):
         async with self.write_lock:
-            cpu_percent = psutil.cpu_percent(interval=1)
-            logging.error(f"{streamer_name} is joining. CPU at {cpu_percent}")
             try:
                 failed_to_join = await self.chat.join_room(streamer_name)
                 if failed_to_join:
@@ -175,10 +172,6 @@ class TwitchAPIConnection:
     async def leave_chat_room(self, streamer_name):
 
         async with self.write_lock:
-            cpu_percent = psutil.cpu_percent(interval=1)
-
-            logging.error(f"{streamer_name} is leaving. CPU at {cpu_percent}")
-
             try:
                 await self.chat.leave_room(streamer_name)
             except asyncio.exceptions.CancelledError as e:

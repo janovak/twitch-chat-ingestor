@@ -9,7 +9,7 @@ function fetchVideos() {
     const oneWeekAgoISODate = oneWeekAgoDate.toISOString();
 
     // Construct the API URL with start and stop timestamps
-    const apiUrl = `https://www.streamer-summaries.com:443/v1.0/clip?start=${currentISODate}&end=${oneWeekAgoISODate}`;
+    const apiUrl = `https://www.streamer-summaries.com:443/v1.0/clip?start=${oneWeekAgoISODate}&end=${currentISODate}`;
     fetch(apiUrl)
         .then(response => response.json())
         .then(data => {

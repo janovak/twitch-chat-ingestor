@@ -110,7 +110,7 @@ class DatabaseConnection:
 
         statement = self.session.prepare(
             """
-            INSERT INTO clips_by_timestamp (partition_key, timestamp, clip_id, embed_url, thumbnail_url)
+            INSERT INTO clips_by_timestamp (year_month, timestamp, clip_id, embed_url, thumbnail_url)
             VALUES (?, ?, ?, ?, ?)
             """
         )
@@ -140,7 +140,8 @@ class DatabaseConnection:
         statement = self.session.prepare(
             """
             SELECT timestamp, clip_id, embed_url, thumbnail_url FROM clips_by_timestamp
-            WHERE partition_key=1 AND timestamp>=? AND timestamp<=?
+            WHERE year_month=1 AND timestamp>=? AND timestamp<=?
+            LIMIT 100
             """,
         )
 
@@ -148,7 +149,7 @@ class DatabaseConnection:
             rows = list(
                 self.session.execute(
                     statement,
-                    (end, start),
+                    (start, end),
                 )
             )
             logging.info(f"Successfully retrieved {len(rows)} rows")
