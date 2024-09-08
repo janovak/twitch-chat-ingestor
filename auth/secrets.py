@@ -33,6 +33,13 @@ def load_twitch_api_secrets():
 
 
 @load_secrets_once
+def load_twitch_tokens():
+    return load_secrets(
+        os.path.join(TWITCH_API_BASE_PATH, "access-and-refersh-token.json")
+    )
+
+
+@load_secrets_once
 def load_astra_secrets():
     cloud_config = {
         "secure_connect_bundle": os.path.join(
@@ -64,6 +71,14 @@ def get_twitch_api_client_id():
 
 def get_twitch_api_secret():
     return load_twitch_api_secrets()["secret"]
+
+
+def get_twitch_access_token():
+    return load_twitch_tokens()["access_token"]
+
+
+def get_twitch_refresh_token():
+    return load_twitch_tokens()["refresh_token"]
 
 
 def get_astra_client_id():
