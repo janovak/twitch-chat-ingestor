@@ -6,6 +6,7 @@ body {
 }
 
 #videoContainer {
+    margin-top: 80px;
     max-width: 600px;
     overflow-y: auto;
     text-align: center;

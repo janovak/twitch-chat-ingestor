@@ -48,6 +48,13 @@ class TimeBucketList:
     def append(self, timestamp):
         bucket = timestamp // self.bucket_size
 
+        # Hack to reset anomaly detection for new streams until we have a better way to clear this when streams go offline
+        if bucket - self.current_bucket > 60:
+            self.running_variance = RunningVariance()
+            self.last_bucket_aggregate = 0
+            self.current_bucket_aggregate = 0
+            self.current_bucket = 0
+
         if self.current_bucket == 0:
             self.current_bucket = bucket
 
@@ -69,7 +76,7 @@ class TimeBucketList:
         self.current_bucket_aggregate = 1
 
     def check_for_anomaly(self):
-        threshold = self.running_variance.standard_deviation() * 15
+        threshold = self.running_variance.standard_deviation() * 5
         anomaly_detected = self.last_bucket_aggregate > threshold
         if anomaly_detected:
             ratio = (

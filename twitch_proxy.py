@@ -2,7 +2,6 @@ import asyncio
 import json
 import logging
 import uuid
-
 import auth.secrets as secrets
 import pika
 import utilities
@@ -89,6 +88,10 @@ class TwitchAPIConnection:
     def __init__(self):
         self.twitch_session = None
         self.chat = None
+        self.chat_rooms_joined = 0
+        self.messages_sent = 0
+        self.write_lock = asyncio.Lock()
+        self.channel_lock = asyncio.Lock()
 
         self.message_queue_connection = pika.BlockingConnection(
             pika.ConnectionParameters(host=secrets.get_cloudamqp_url())
@@ -125,12 +128,10 @@ class TwitchAPIConnection:
         self.twitch_session = await Twitch(
             secrets.get_twitch_api_client_id(), secrets.get_twitch_api_secret()
         )
-        auth = UserAuthenticator(
-            self.twitch_session, [AuthScope.CHAT_READ, AuthScope.CLIPS_EDIT]
-        )
-        token, refresh_token = await auth.authenticate()
         await self.twitch_session.set_user_authentication(
-            token, [AuthScope.CHAT_READ, AuthScope.CLIPS_EDIT], refresh_token
+            secrets.get_twitch_access_token(),
+            [AuthScope.CHAT_READ, AuthScope.CLIPS_EDIT],
+            secrets.get_twitch_refresh_token(),
         )
 
     async def initialize_chat(self):
@@ -139,12 +140,59 @@ class TwitchAPIConnection:
         self.chat.start()
 
     async def join_chat_room(self, streamer_name):
-        await self.chat.join_room(streamer_name)
-        logging.info(f"Joined {streamer_name}'s chat room")
+        async with self.write_lock:
+            try:
+                failed_to_join = await self.chat.join_room(streamer_name)
+                if failed_to_join:
+                    # await self.authenticate()
+                    # await self.initialize_chat()
+                    logging.critical(f"{failed_to_join} failed so restarted chat")
+                    return
+            except asyncio.exceptions.CancelledError:
+                logging.critical(f"CCCError joining chat room: {e}")
+                # await self.authenticate()
+                # await self.initialize_chat()
+                # await self.chat.join_room(streamer_name)
+                # logging.error("CCCjust retried")
+                return
+            except Exception as e:
+                logging.critical(f"Error joining chat room: {e}")
+                # await self.authenticate()
+                # await self.initialize_chat()
+                # await self.chat.join_room(streamer_name)
+                # logging.error("just retried")
+                return
+            self.chat_rooms_joined += 1
+            logging.critical(f"{streamer_name} joined: {self.chat_rooms_joined}")
+            # logging.info(f"Joined {streamer_name}'s chat room")
 
     async def leave_chat_room(self, streamer_name):
-        await self.chat.leave_room(streamer_name)
-        logging.info(f"Left {streamer_name}'s chat room")
+
+        async with self.write_lock:
+
+            try:
+                await self.chat.leave_room(streamer_name)
+            except asyncio.exceptions.CancelledError as e:
+                logging.critical(f"CCCError leaving chat room: {e}")
+                # await self.authenticate()
+                # await self.initialize_chat()
+                # await self.chat.leave_room(streamer_name)
+                # logging.error("CCCjust retried")
+                return
+            except Exception as e:
+                # hit this within a few minutes with no lock in twitch_proxy and no rate limiting on our side. looked like twitch rate limited us according to logs
+                # cannot write to closing transport. hit this again with similar settings--only upped redis cache timeout to so we'd havemore rooms to listen to
+                # ok, putting lock back now. keeping redis timeout high and 200 chat rooms
+                logging.critical(f"Error leaving chat room: {e}")
+                # await self.authenticate()
+                # await self.initialize_chat()
+                # await self.chat.leave_room(streamer_name)
+                # logging.error("just retried")
+                return
+
+            self.chat_rooms_joined -= 1
+            logging.critical(f"{streamer_name} left: {self.chat_rooms_joined}")
+            # logging.error(f"Left {streamer_name}'s chat room")
 
     async def on_message(self, msg: ChatMessage):
         if not is_valid_message(msg):
@@ -152,6 +200,10 @@ class TwitchAPIConnection:
                 "Skipping message as it does not contain the necessary fields"
             )
             return
+
+        self.messages_sent += 1
+        if self.messages_sent % 1000 == 0:
+            logging.error(f"messages sent: {self.messages_sent // 1000}")
 
         # Extract relevant fields from the message and serialize it to JSON
         message_fields = {
@@ -167,14 +219,15 @@ class TwitchAPIConnection:
         )
 
         try:
-            self.channel.basic_publish(
-                exchange=self.chat_exchange,
-                routing_key="",
-                body=message,
-                properties=pika.BasicProperties(
-                    delivery_mode=pika.DeliveryMode.Persistent
-                ),
-            )
+            async with self.channel_lock:
+                self.channel.basic_publish(
+                    exchange=self.chat_exchange,
+                    routing_key="",
+                    body=message,
+                    properties=pika.BasicProperties(
+                        delivery_mode=pika.DeliveryMode.Persistent
+                    ),
+                )
 
             logging.info(
                 f"Published message, {message_fields['message_id']}, which was posted in chat room {message_fields['broadcaster_id']} at {message_fields['timestamp']}, to the message queue"
@@ -187,6 +240,7 @@ class TwitchAPIConnection:
 
     async def get_online_streamers(self, batch_size):
         logging.info(f"Retrieving currently live streamers")
+        batch_size = min(batch_size, 100)
         streamers = self.twitch_session.get_streams(
             first=batch_size, stream_type="live"
         )
