@@ -203,7 +203,7 @@ class TwitchAPIConnection:
 
         self.messages_sent += 1
         if self.messages_sent % 1000 == 0:
-            logging.error(f"messages sent: {self.messages_sent // 1000}")
+            logging.info(f"messages sent: {self.messages_sent // 1000}")
 
         # Extract relevant fields from the message and serialize it to JSON
         message_fields = {

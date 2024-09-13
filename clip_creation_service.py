@@ -61,6 +61,7 @@ class ClipCreator:
         try:
             clip_id = await self.twitch_session.create_clip(broadcaster_id)
 
+            # Wait 15 seconds before creating the clip so the highlight is in the middle of the clip.
             await asyncio.sleep(15)
 
             id, url, thumbnail = await self.twitch_session.get_clip(clip_id)

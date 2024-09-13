@@ -1,6 +1,4 @@
 import aio_pika
-import os
-import signal
 import asyncio
 import concurrent.futures
 import logging

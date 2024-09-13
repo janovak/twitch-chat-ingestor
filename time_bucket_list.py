@@ -76,13 +76,13 @@ class TimeBucketList:
         self.current_bucket_aggregate = 1
 
     def check_for_anomaly(self):
-        threshold = self.running_variance.standard_deviation() * 5
+        threshold = self.running_variance.standard_deviation() * 20
         anomaly_detected = self.last_bucket_aggregate > threshold
         if anomaly_detected:
             ratio = (
                 self.last_bucket_aggregate / self.running_variance.standard_deviation()
             )
-            logging.error(f"RATIO: {ratio}")
+            logging.info("Anomaly detected! Ratio: {ratio}")
         return anomaly_detected
 
     def append_and_check_for_anomaly(self, timestamp):

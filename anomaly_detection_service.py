@@ -58,11 +58,11 @@ class AnomalyDetector:
         broadcaster_id = message_fields["broadcaster_id"]
 
         if self.total_message_count % 100000 == 0:
-            logging.critical(f"Messages received {self.total_message_count}")
+            logging.info(f"Messages received {self.total_message_count}")
 
         self.total_message_count += 1
 
-        logging.info(
+        logging.debug(
             f"Message, {message_fields['message_id']}, received in {broadcaster_id}'s chat room"
         )
 
@@ -91,7 +91,7 @@ class AnomalyDetector:
                 timestamp - self.last_broadcaster_anomaly[broadcaster_id]
                 > self.broadcaster_anomaly_cooldown
             ):
-                logging.error(f"Anomaly detected in {broadcaster_id}'s chat room")
+                logging.info(f"Anomaly detected in {broadcaster_id}'s chat room")
                 self.last_broadcaster_anomaly[broadcaster_id] = timestamp
 
                 message = json.dumps(
@@ -106,7 +106,7 @@ class AnomalyDetector:
                     ),
                 )
             else:
-                logging.info(
+                logging.debug(
                     f"Anomaly detected in {broadcaster_id}'s chat room, but we're in the cooldown period"
                 )
 

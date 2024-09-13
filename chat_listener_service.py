@@ -97,7 +97,7 @@ class ChatRoomJoiner:
                 logging.warning(f"Rate limiter check timing out.")
                 return False
             elif timeout < 0:
-                logging.warning(f"oops")
+                logging.warning(f"Rate limiter check timing out.")
                 return False
 
             try:
@@ -124,7 +124,7 @@ class ChatRoomJoiner:
         logging.info(f"{user_login} is currently live")
 
         if user_login not in self.online_streamers and rank < 20:
-            logging.error(f"{user_login} just came online")
+            logging.info(f"{user_login} just came online")
 
             limit_exceeded = not await self.check_rate_limiter_with_retry(35)
             if not limit_exceeded:
@@ -138,7 +138,7 @@ class ChatRoomJoiner:
 async def main():
     logging.basicConfig(
         filemode="w",
-        level=logging.CRITICAL,
+        level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 

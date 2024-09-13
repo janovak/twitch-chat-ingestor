@@ -63,13 +63,13 @@ class TwitchAPIPoller:
                     await self.twitch_session.create_clip(streamer.user_id)
                     self.streamer_allows_clipping[streamer.user_id] = True
                 elif not self.streamer_allows_clipping[streamer.user_id]:
-                    logging.critical(
+                    logging.info(
                         f"Skipping {streamer.user_login} because we know they have clipping disabled."
                     )
                     continue
             except Exception as e:
                 self.streamer_allows_clipping[streamer.user_id] = False
-                logging.critical(
+                logging.info(
                     f"Skipping {streamer.user_login} because they have clipping disabled. Error: {e}"
                 )
                 continue
