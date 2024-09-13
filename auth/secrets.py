@@ -35,7 +35,7 @@ def load_twitch_api_secrets():
 @load_secrets_once
 def load_twitch_tokens():
     return load_secrets(
-        os.path.join(TWITCH_API_BASE_PATH, "access-and-refersh-token.json")
+        os.path.join(TWITCH_API_BASE_PATH, "access-and-refresh-token.json")
     )
 
 

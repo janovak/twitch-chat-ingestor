@@ -100,9 +100,7 @@ async def main():
     await session.authenticate()
     session.start_polling_online_streamers()
 
-    loop = asyncio.get_running_loop()
-    with concurrent.futures.ThreadPoolExecutor() as pool:
-        await loop.run_in_executor(pool, input, "Press enter to exit\n")
+    await asyncio.sleep(float("inf"))
 
 
 asyncio.get_event_loop().run_until_complete(main())

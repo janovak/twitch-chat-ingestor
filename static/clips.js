@@ -36,7 +36,11 @@ function fetchVideos() {
 
                         resolve({ element: thumbnailElement, timestamp: timestamp });
                     };
-                    img.onerror = reject;
+                    img.onerror = (error) => {
+                        console.error('Error loading image:', thumbnailUrl, error);
+                        // Resolve with null to skip this image and continue with others
+                        resolve(null);
+                    };
                     img.src = thumbnailUrl;
                 });
 
@@ -45,10 +49,11 @@ function fetchVideos() {
 
             Promise.all(thumbnailPromises)
                 .then(thumbnails => {
-                    thumbnails.sort((a, b) => b.timestamp - a.timestamp);
-                    thumbnails.forEach(thumbnail => {
-                        thumbnailsContainer.appendChild(thumbnail.element);
-                    });
+                    // Filter out nulls (images that failed to load)
+                    thumbnails.filter(thumbnail => thumbnail !== null).sort((a, b) => b.timestamp - a.timestamp)
+                        .forEach(thumbnail => {
+                            thumbnailsContainer.appendChild(thumbnail.element);
+                        });
                 })
                 .catch(error => console.error('Error loading thumbnails:', error));
         })
