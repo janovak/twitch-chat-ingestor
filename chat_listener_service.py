@@ -123,7 +123,7 @@ class ChatRoomJoiner:
 
         logging.info(f"{user_login} is currently live")
 
-        if user_login not in self.online_streamers and rank < 20:
+        if user_login not in self.online_streamers and rank < 2:
             logging.info(f"{user_login} just came online")
 
             limit_exceeded = not await self.check_rate_limiter_with_retry(35)
