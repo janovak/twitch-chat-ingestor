@@ -116,7 +116,7 @@ class AnomalyDetector:
 def main():
     logging.basicConfig(
         filemode="w",
-        level=logging.WARNING,
+        level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
