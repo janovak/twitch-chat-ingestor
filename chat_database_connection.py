@@ -141,6 +141,7 @@ class DatabaseConnection:
             """
             SELECT timestamp, clip_id, embed_url, thumbnail_url FROM clips_by_timestamp
             WHERE year_month=1 AND timestamp>=? AND timestamp<=?
+            ORDER BY timestamp DESC
             LIMIT 100
             """,
         )

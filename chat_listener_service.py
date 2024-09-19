@@ -142,6 +142,10 @@ async def main():
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
+    # Only show warnings and above from twitchAPI
+    twitch_chat_logger = logging.getLogger('twitchAPI.chat')
+    twitch_chat_logger.setLevel(logging.WARNING)
+
     joiner = ChatRoomJoiner()
     await joiner.initialize_twitch()
     await joiner.redis_cache.flushall()

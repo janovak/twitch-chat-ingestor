@@ -202,8 +202,8 @@ class TwitchAPIConnection:
             return
 
         self.messages_sent += 1
-        if self.messages_sent % 1000 == 0:
-            logging.info(f"messages sent: {self.messages_sent // 1000}")
+        if self.messages_sent % 100000 == 0:
+            logging.info(f"messages sent: {self.messages_sent}")
 
         # Extract relevant fields from the message and serialize it to JSON
         message_fields = {
@@ -214,7 +214,7 @@ class TwitchAPIConnection:
         }
         message = json.dumps(message_fields)
 
-        logging.info(
+        logging.debug(
             f"Message {message_fields['message_id']} posted in chat room {message_fields['broadcaster_id']} at {message_fields['timestamp']}"
         )
 
@@ -229,7 +229,7 @@ class TwitchAPIConnection:
                     ),
                 )
 
-            logging.info(
+            logging.debug(
                 f"Published message, {message_fields['message_id']}, which was posted in chat room {message_fields['broadcaster_id']} at {message_fields['timestamp']}, to the message queue"
             )
         except Exception as e:

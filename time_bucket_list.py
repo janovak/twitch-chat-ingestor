@@ -82,7 +82,7 @@ class TimeBucketList:
             ratio = (
                 self.last_bucket_aggregate / self.running_variance.standard_deviation()
             )
-            logging.info("Anomaly detected! Ratio: {ratio}")
+            logging.debug(f"Anomaly detected! Ratio: {ratio}")
         return anomaly_detected
 
     def append_and_check_for_anomaly(self, timestamp):
