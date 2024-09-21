@@ -8,6 +8,7 @@ import auth.secrets as secrets
 import pika
 import twitch_proxy
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from twitchAPI.type import TwitchAPIException
 
 
 class TwitchAPIPoller:
@@ -55,22 +56,27 @@ class TwitchAPIPoller:
         streamers = await self.twitch_session.get_online_streamers(batch_size)
 
         counter = 0
+        # Keep track of which streamers have clipping disabled.
         async for streamer in streamers:
-            # Bug in create_clip throws a KeyError exception when trying to clip a stream that has clipping disabled
-            # Catch the exception here and skip the stream so we can save resources
-            try:
-                if streamer.user_id not in self.streamer_allows_clipping:
-                    await self.twitch_session.create_clip(streamer.user_id)
-                    self.streamer_allows_clipping[streamer.user_id] = True
-                elif not self.streamer_allows_clipping[streamer.user_id]:
+            user_id = streamer.user_id
+            user_login = streamer.user_login
+
+            # Check if we have already determined the clipping status for this streamer
+            allows_clipping = self.streamer_allows_clipping.get(user_id)
+
+            if allows_clipping is None:
+                try:
+                    await self.twitch_session.create_clip(user_id)
+                    self.streamer_allows_clipping[user_id] = True
+                except TwitchAPIException:
+                    self.streamer_allows_clipping[user_id] = False
                     logging.info(
-                        f"Skipping {streamer.user_login} because we know they have clipping disabled."
+                        f"Skipping {user_login} because they have clipping disabled."
                     )
                     continue
-            except Exception as e:
-                self.streamer_allows_clipping[streamer.user_id] = False
-                logging.info(
-                    f"Skipping {streamer.user_login} because they have clipping disabled. Error: {e}"
+            elif not allows_clipping:
+                logging.debug(
+                    f"Skipping {user_login} because we know they have clipping disabled."
                 )
                 continue
 

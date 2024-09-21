@@ -5,11 +5,10 @@ cassandra_driver==3.29.0
 Flask==3.0.2
 Flask_Parameter_Validation==2.2.4
 grpcio==1.62.1
-gunicorn==21.2.0
 pika==1.3.2
-protobuf==5.26.0
+protobuf==4.21.6
 psutil==5.9.8
 psycopg2_binary==2.9.9
 pybloomfiltermmap3==0.5.7
 redis==5.0.3
-twitchAPI==4.2.0
+twitchAPI==4.3.0
