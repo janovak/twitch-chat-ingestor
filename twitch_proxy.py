@@ -5,6 +5,8 @@ import uuid
 import auth.secrets as secrets
 import pika
 import utilities
+
+from prometheus_client import start_http_server, Counter
 from twitchAPI.chat import Chat, ChatMessage
 from twitchAPI.oauth import UserAuthenticator
 from twitchAPI.twitch import Twitch
@@ -92,6 +94,13 @@ class TwitchAPIConnection:
         self.messages_sent = 0
         self.write_lock = asyncio.Lock()
         self.channel_lock = asyncio.Lock()
+
+        self.message_counter = Counter(
+            "streamer_message_count",
+            "Number of messages per streamer",
+            ["broadcaster_id"],
+        )
+        start_http_server(9090)
 
         self.message_queue_connection = pika.BlockingConnection(
             pika.ConnectionParameters(host=secrets.get_cloudamqp_url())
@@ -217,6 +226,8 @@ class TwitchAPIConnection:
         logging.debug(
             f"Message {message_fields['message_id']} posted in chat room {message_fields['broadcaster_id']} at {message_fields['timestamp']}"
         )
+
+       self.message_counter.labels(broadcaster_id=message_fields["broadcaster_id"]).inc()
 
         try:
             async with self.channel_lock:
