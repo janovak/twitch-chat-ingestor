@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 from datetime import datetime
+from prometheus_client import start_http_server
 
 import auth.secrets as secrets
 import aio_pika
@@ -145,6 +146,8 @@ async def main():
     # Only show warnings and above from twitchAPI
     twitch_chat_logger = logging.getLogger('twitchAPI.chat')
     twitch_chat_logger.setLevel(logging.WARNING)
+
+    start_http_server(9100)
 
     joiner = ChatRoomJoiner()
     await joiner.initialize_twitch()
