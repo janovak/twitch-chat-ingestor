@@ -1,6 +1,7 @@
 import json
 import logging
 from collections import defaultdict
+from prometheus_client import start_http_server, Counter
 
 import auth.secrets as secrets
 import pika
@@ -37,6 +38,12 @@ class AnomalyDetector:
         self.last_broadcaster_anomaly = defaultdict(int)
 
         self.total_message_count = 0
+
+        self.anomaly_counter = Counter(
+            "streamer_anomaly_count",
+            "Number of anomalies per streamer",
+            ["broadcaster_id"],
+        )
 
     def __del__(self):
         self.shutdown()
@@ -105,6 +112,8 @@ class AnomalyDetector:
                         delivery_mode=pika.DeliveryMode.Persistent
                     ),
                 )
+
+                self.anomaly_counter.labels(broadcaster_id=broadcaster_id).inc()
             else:
                 logging.debug(
                     f"Anomaly detected in {broadcaster_id}'s chat room, but we're in the cooldown period"
@@ -119,6 +128,8 @@ def main():
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
+
+    start_http_server(9200)
 
     session = AnomalyDetector()
     session.start_consuming_chats()

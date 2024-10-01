@@ -226,7 +226,9 @@ class TwitchAPIConnection:
             f"Message {message_fields['message_id']} posted in chat room {message_fields['broadcaster_id']} at {message_fields['timestamp']}"
         )
 
-        self.message_counter.labels(broadcaster_id=message_fields["broadcaster_id"]).inc()
+        self.message_counter.labels(
+            broadcaster_id=message_fields["broadcaster_id"]
+        ).inc()
 
         try:
             async with self.channel_lock:
