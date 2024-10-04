@@ -85,7 +85,7 @@ def serve():
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=2))
     chat_database_pb2_grpc.add_ChatDatabaseServicer_to_server(
         ChatDatabaseServicer(), server
     )

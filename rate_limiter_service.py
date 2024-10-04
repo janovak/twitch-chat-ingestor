@@ -47,7 +47,7 @@ def serve():
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=2))
     rate_limiter_pb2_grpc.add_RateLimiterServicer_to_server(
         RateLimiterServicer(limit=20), server
     )
