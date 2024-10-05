@@ -1,0 +1,44 @@
+server {
+    # Redirect HTTP to HTTPS
+    listen 80;
+    server_name streamer-summaries.com;
+
+    location / {
+        return 301 https://www.streamer-summaries.com$request_uri;
+    }
+}
+
+server {
+    # Redirect non-www to www and handle HTTPS traffic
+    listen 443 ssl;
+    server_name streamer-summaries.com;
+
+    # SSL configuration
+    ssl_certificate /etc/letsencrypt/live/streamer-summaries.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/streamer-summaries.com/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    location / {
+        return 301 https://www.streamer-summaries.com$request_uri;
+    }
+}
+
+server {
+    # Handle requests for www.streamer-summaries.com
+    listen 443 ssl;
+    server_name www.streamer-summaries.com;
+
+    # SSL configuration
+    ssl_certificate /etc/letsencrypt/live/streamer-summaries.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/streamer-summaries.com/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    location / {
+        include proxy_params;
+        proxy_pass http://unix:/var/run/streamer-summaries.sock;
+    }
+     
+}
+

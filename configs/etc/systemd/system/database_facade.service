@@ -1,0 +1,14 @@
+[Unit]
+Description=Database facade
+After=network.target
+
+[Service]
+User=ubuntu
+Group=www-data
+WorkingDirectory=/home/ubuntu/repos/twitch-chat-ingestor
+Environment="PATH=/home/ubuntu/repos/twitch-chat-ingestor/env/bin"
+ExecStart=/home/ubuntu/repos/twitch-chat-ingestor/env/bin/python /home/ubuntu/repos/twitch-chat-ingestor/chat_database_facade.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
