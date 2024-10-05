@@ -1,0 +1,17 @@
+global:
+  scrape_interval: 60s
+
+scrape_configs:
+ - job_name: chat_listener_service
+    static_configs:
+      - targets: ['localhost:9100']
+
+ - job_name: anomaly_detection_service
+    static_configs:
+      - targets: ['localhost:9200']
+
+remote_write:
+  - url: https://prometheus-prod-36-prod-us-west-0.grafana.net/api/prom/push
+    basic_auth:
+      username: 1792933
+      password: glc_eyJvIjoiMTIyMjE3NyIsIm4iOiJzdGFjay0xMDM3OTczLWhtLXdyaXRlLXN0cmVhbWVyLXN1bW1hcmllcyIsImsiOiIxM24yRG1aa2NiV3A5azNtNXRVNTJwODUiLCJtIjp7InIiOiJwcm9kLXVzLXdlc3QtMCJ9fQ==
