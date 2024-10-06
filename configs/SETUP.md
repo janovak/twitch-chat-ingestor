@@ -45,11 +45,13 @@
     sudo systemctl start rabbitmq-server
     sudo systemctl enable rabbitmq-server
     ```
-
-- Restart `database_facade` daemon:
-    ```bash
-    sudo restart_daemon database_facade
-    ```
+- Enable and start services services:
+     ```bash
+    sudo systemctl start database_facade
+    sudo systemctl enable database_facade
+    sudo systemctl start prometheus
+    sudo systemctl enable prometheus
+     ```
 
 ## gRPC Command for Python Code Generation
     ```bash
