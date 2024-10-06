@@ -1,0 +1,21 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: https://logs-prod-021.grafana.net/loki/api/v1/push
+    basic_auth:
+      username: 995753
+      password: glc_eyJvIjoiMTIyMjE3NyIsIm4iOiJzdGFjay0xMDM3OTczLWhsLXJlYWQtc3RyZWFtZXItc3VtbWFyaWVzLWxva2kiLCJrIjoiWDUxc2g4T0kxNmk5ODVUcjNQM2JUT3VZIiwibSI6eyJyIjoicHJvZC11cy13ZXN0LTAifX0
+
+scrape_configs:
+- job_name: system
+  static_configs:
+  - targets:
+      - localhost
+    labels:
+      job: varlogs
+      __path__: /var/log/*log

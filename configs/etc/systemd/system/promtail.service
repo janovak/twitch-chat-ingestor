@@ -1,0 +1,15 @@
+[Unit]
+Description=Promtail Service
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/promtail --config.file=/home/ubuntu/repos/twitch-chat-ingestor/configs/promtail/promtail-config.yml
+Restart=on-failure
+RestartSec=5
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=promtail
+
+[Install]
+WantedBy=multi-user.target
+
