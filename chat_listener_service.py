@@ -138,13 +138,14 @@ class ChatRoomJoiner:
 
 async def main():
     logging.basicConfig(
+        filename="/var/log/chat_listener_service.py",
         filemode="w",
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
     # Only show warnings and above from twitchAPI
-    twitch_chat_logger = logging.getLogger('twitchAPI.chat')
+    twitch_chat_logger = logging.getLogger("twitchAPI.chat")
     twitch_chat_logger.setLevel(logging.WARNING)
 
     start_http_server(9100)
