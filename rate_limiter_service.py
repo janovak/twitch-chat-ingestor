@@ -1,6 +1,5 @@
 import logging
 import threading
-import os
 from concurrent import futures
 
 import gen.grpc.rate_limiter.rate_limiter_pb2 as rate_limiter_pb2
@@ -42,9 +41,7 @@ class RateLimiterServicer(rate_limiter_pb2_grpc.RateLimiterServicer):
 
 
 def serve():
-    log_path = os.path.expandvars("$HOME/logs/rate_limiter_service.py")
     logging.basicConfig(
-        filename=log_path,
         filemode="w",
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",

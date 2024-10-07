@@ -1,6 +1,5 @@
 import asyncio
 import json
-import os
 import logging
 from datetime import datetime
 from prometheus_client import start_http_server
@@ -138,9 +137,8 @@ class ChatRoomJoiner:
 
 
 async def main():
-    log_path = os.path.expandvars("$HOME/logs/chat_listener_service.py")
     logging.basicConfig(
-        filename=log_path,
+        filename="/var/log/chat_listener_service.py",
         filemode="w",
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",

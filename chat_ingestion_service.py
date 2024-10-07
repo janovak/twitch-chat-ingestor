@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 import uuid
 from collections import defaultdict
 
@@ -99,9 +98,8 @@ class ChatIngestor:
 
 
 def main():
-    log_path = os.path.expandvars("$HOME/logs/chat_ingestion_service.py")
     logging.basicConfig(
-        filename=log_path,
+        filename="/var/log/chat_ingestion_service.py",
         filemode="w",
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",

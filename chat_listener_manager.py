@@ -3,7 +3,6 @@ import asyncio
 import concurrent.futures
 import logging
 import psutil
-import os
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 
@@ -79,11 +78,10 @@ class ProcessManager:
 
 
 async def main():
-    log_path = os.path.expandvars("$HOME/logs/chat_listener_manager.py")
     logging.basicConfig(
-        filename=log_path,
+        filename="/var/log/chat_listener_manager.py",
         filemode="w",
-        level=logging.INFO,
+        level=logging.CRITICAL,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 

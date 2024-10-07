@@ -1,7 +1,6 @@
 import asyncio
 import json
 import logging
-import os
 from datetime import datetime
 from aio_pika import connect_robust, ExchangeType
 
@@ -75,9 +74,8 @@ class ClipCreator:
 
 
 async def main():
-    log_path = os.path.expandvars("$HOME/logs/clip_creation_service.py")
     logging.basicConfig(
-        filename=log_path,
+        filename="/var/log/clip_creation_service.py",
         filemode="w",
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
