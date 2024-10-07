@@ -97,7 +97,6 @@ class TwitchAPIPoller:
 
 async def main():
     logging.basicConfig(
-        filename="/var/log/twitch_polling_service.py",
         filemode="w",
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",

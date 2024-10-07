@@ -80,7 +80,6 @@ class ChatDatabaseServicer(chat_database_pb2_grpc.ChatDatabaseServicer):
 
 def serve():
     logging.basicConfig(
-        filename="/var/log/chat_database_facade.py",
         filemode="w",
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",

@@ -79,7 +79,6 @@ class ProcessManager:
 
 async def main():
     logging.basicConfig(
-        filename="/var/log/chat_listener_manager.py",
         filemode="w",
         level=logging.CRITICAL,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
