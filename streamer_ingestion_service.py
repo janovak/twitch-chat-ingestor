@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 
 import auth.secrets as secrets
 import pika
@@ -71,8 +72,9 @@ class StreamerIngestor:
 
 
 def main():
+    log_path = os.path.expandvars("$HOME/logs/streamer_ingestion_service.py")
     logging.basicConfig(
-        filename="/var/log/streamer_ingestion_service.py",
+        filename=log_path,
         filemode="w",
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",

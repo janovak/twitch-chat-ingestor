@@ -1,4 +1,5 @@
 import logging
+import os
 from concurrent import futures
 
 import chat_database_connection
@@ -79,8 +80,9 @@ class ChatDatabaseServicer(chat_database_pb2_grpc.ChatDatabaseServicer):
 
 
 def serve():
+    log_path = os.path.expandvars("$HOME/logs/chat_database_facade.py")
     logging.basicConfig(
-        filename="/var/log/chat_database_facade.py",
+        filename=log_path,
         filemode="w",
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",

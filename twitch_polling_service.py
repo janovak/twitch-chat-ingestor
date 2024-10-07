@@ -2,6 +2,7 @@ import asyncio
 import concurrent.futures
 import json
 import logging
+import os
 import sys
 
 import auth.secrets as secrets
@@ -96,8 +97,9 @@ class TwitchAPIPoller:
 
 
 async def main():
+    log_path = os.path.expandvars("$HOME/logs/twitch_polling_service.py")
     logging.basicConfig(
-        filename="/var/log/twitch_polling_service.py",
+        filename=log_path,
         filemode="w",
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",

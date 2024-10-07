@@ -1,4 +1,5 @@
 import json
+import os
 import logging
 from collections import defaultdict
 from prometheus_client import start_http_server, Counter
@@ -123,8 +124,9 @@ class AnomalyDetector:
 
 
 def main():
+    log_path = os.path.expandvars("$HOME/logs/anomaly_detection_service.py")
     logging.basicConfig(
-        filename="/var/log/anomaly_detection_service.py",
+        filename=log_path,
         filemode="w",
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
