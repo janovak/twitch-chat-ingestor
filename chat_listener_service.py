@@ -94,10 +94,7 @@ class ChatRoomJoiner:
 
     async def check_rate_limiter_with_retry(self, timeout):
         while True:
-            if timeout == 0:
-                logging.warning(f"Rate limiter check timing out.")
-                return False
-            elif timeout < 0:
+            if timeout <= 0:
                 logging.warning(f"Rate limiter check timing out.")
                 return False
 
@@ -127,7 +124,9 @@ class ChatRoomJoiner:
         if user_login not in self.online_streamers and rank < 2:
             logging.info(f"{user_login} just came online")
 
-            limit_exceeded = not await self.check_rate_limiter_with_retry(35)
+            # Bypass rate limiter while figuring out 'StatusCode.UNIMPLEMENTED Method not found!' issue
+            # limit_exceeded = not await self.check_rate_limiter_with_retry(35)
+            limit_exceeded = False
             if not limit_exceeded:
                 self.online_streamers.add(user_login)
                 await self.redis_cache.set(user_login, "")
@@ -144,7 +143,7 @@ async def main():
     )
 
     # Only show warnings and above from twitchAPI
-    twitch_chat_logger = logging.getLogger('twitchAPI.chat')
+    twitch_chat_logger = logging.getLogger("twitchAPI.chat")
     twitch_chat_logger.setLevel(logging.WARNING)
 
     start_http_server(9100)

@@ -90,7 +90,6 @@ class TwitchAPIConnection:
     def __init__(self):
         self.twitch_session = None
         self.chat = None
-        self.chat_rooms_joined = 0
         self.messages_sent = 0
         self.write_lock = asyncio.Lock()
         self.channel_lock = asyncio.Lock()
@@ -152,27 +151,15 @@ class TwitchAPIConnection:
             try:
                 failed_to_join = await self.chat.join_room(streamer_name)
                 if failed_to_join:
-                    # await self.authenticate()
-                    # await self.initialize_chat()
-                    logging.critical(f"{failed_to_join} failed so restarted chat")
+                    logging.error(f"Failed to join the chat room.")
                     return
             except asyncio.exceptions.CancelledError:
-                logging.critical(f"CCCError joining chat room: {e}")
-                # await self.authenticate()
-                # await self.initialize_chat()
-                # await self.chat.join_room(streamer_name)
-                # logging.error("CCCjust retried")
+                logging.error(f"Error joining chat room: {e}")
                 return
             except Exception as e:
-                logging.critical(f"Error joining chat room: {e}")
-                # await self.authenticate()
-                # await self.initialize_chat()
-                # await self.chat.join_room(streamer_name)
-                # logging.error("just retried")
+                logging.error(f"Error joining chat room: {e}")
                 return
-            self.chat_rooms_joined += 1
-            logging.critical(f"{streamer_name} joined: {self.chat_rooms_joined}")
-            # logging.info(f"Joined {streamer_name}'s chat room")
+            logging.info(f"Joined {streamer_name}'s chat room")
 
     async def leave_chat_room(self, streamer_name):
 
@@ -181,26 +168,12 @@ class TwitchAPIConnection:
             try:
                 await self.chat.leave_room(streamer_name)
             except asyncio.exceptions.CancelledError as e:
-                logging.critical(f"CCCError leaving chat room: {e}")
-                # await self.authenticate()
-                # await self.initialize_chat()
-                # await self.chat.leave_room(streamer_name)
-                # logging.error("CCCjust retried")
+                logging.error(f"Error leaving chat room: {e}")
                 return
             except Exception as e:
-                # hit this within a few minutes with no lock in twitch_proxy and no rate limiting on our side. looked like twitch rate limited us according to logs
-                # cannot write to closing transport. hit this again with similar settings--only upped redis cache timeout to so we'd havemore rooms to listen to
-                # ok, putting lock back now. keeping redis timeout high and 200 chat rooms
-                logging.critical(f"Error leaving chat room: {e}")
-                # await self.authenticate()
-                # await self.initialize_chat()
-                # await self.chat.leave_room(streamer_name)
-                # logging.error("just retried")
+                logging.error(f"Error leaving chat room: {e}")
                 return
-
-            self.chat_rooms_joined -= 1
-            logging.critical(f"{streamer_name} left: {self.chat_rooms_joined}")
-            # logging.error(f"Left {streamer_name}'s chat room")
+            logging.error(f"Left {streamer_name}'s chat room")
 
     async def on_message(self, msg: ChatMessage):
         if not is_valid_message(msg):
