@@ -1,21 +1,76 @@
 server:
-  http_listen_port: 9080
+  http_listen_port: 0
   grpc_listen_port: 0
 
 positions:
   filename: /tmp/positions.yaml
 
 clients:
-  - url: https://logs-prod-021.grafana.net/loki/api/v1/push
-    basic_auth:
-      username: 995753
-      password: glc_eyJvIjoiMTIyMjE3NyIsIm4iOiJzdGFjay0xMDM3OTczLWhsLXJlYWQtc3RyZWFtZXItc3VtbWFyaWVzLWxva2kiLCJrIjoiWDUxc2g4T0kxNmk5ODVUcjNQM2JUT3VZIiwibSI6eyJyIjoicHJvZC11cy13ZXN0LTAifX0
+  - url: https://995753:glc_eyJvIjoiMTIyMjE3NyIsIm4iOiJzdGFjay0xMDM3OTczLWhsLXdyaXRlLXN0cmVhbWVyLXN1bW1hcmllcy1sb2tpMiIsImsiOiJhOEFWNDc4YmZ2bWZGbkcyVDY4M0w5NFYiLCJtIjp7InIiOiJwcm9kLXVzLXdlc3QtMCJ9fQ==@logs-prod-021.grafana.net/loki/api/v1/push
 
 scrape_configs:
-- job_name: system
-  static_configs:
-  - targets:
-      - localhost
-    labels:
-      job: varlogs
-      __path__: /var/log/*log
+  - job_name: anomaly_detection_service_logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: anomaly_detection_service
+          __path__: /home/ubuntu/logs/anomaly_detection_service.log
+    pipeline_stages:
+      - regex:
+          expression: "(?P<level>DEBUG|WARNING|INFO|ERROR|CRITICAL)"
+      - labels:
+          level:
+
+  - job_name: chat_listener_service_logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: chat_listener_service
+          __path__: /home/ubuntu/logs/chat_listener_service.log
+    pipeline_stages:
+      - regex:
+          expression: "(?P<level>DEBUG|WARNING|INFO|ERROR|CRITICAL)"
+      - labels:
+          level:
+
+  - job_name: clip_creation_service_logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: clip_creation_service
+          __path__: /home/ubuntu/logs/clip_creation_service.log
+    pipeline_stages:
+      - regex:
+          expression: "(?P<level>DEBUG|WARNING|INFO|ERROR|CRITICAL)"
+      - labels:
+          level:
+
+  - job_name: rate_limiter_service_logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: rate_limiter_service
+          __path__: /home/ubuntu/logs/rate_limiter_service.log
+    pipeline_stages:
+      - regex:
+          expression: "(?P<level>DEBUG|WARNING|INFO|ERROR|CRITICAL)"
+      - labels:
+          level:
+
+  - job_name: twitch_polling_service_logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: twitch_polling_service
+          __path__: /home/ubuntu/logs/twitch_polling_service.log
+    pipeline_stages:
+      - regex:
+          expression: "(?P<level>DEBUG|WARNING|INFO|ERROR|CRITICAL)"
+      - labels:
+          level:
+
