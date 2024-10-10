@@ -45,6 +45,7 @@
     sudo systemctl start rabbitmq-server
     sudo systemctl enable rabbitmq-server
     ```
+
 - Enable and start services services:
      ```bash
     sudo systemctl start database_facade
@@ -52,6 +53,13 @@
     sudo systemctl start prometheus
     sudo systemctl enable prometheus
      ```
+
+- Configure Redis to publish expiration notifications:
+    Run
+    ```bash
+    CONFIG SET notify-keyspace-events Ex
+    ```
+    in Redis CLI (can be found in Redis Insight).
 
 ## gRPC Command for Python Code Generation
     ```bash
