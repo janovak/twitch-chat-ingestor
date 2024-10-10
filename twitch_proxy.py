@@ -171,7 +171,7 @@ class TwitchAPIConnection:
             except Exception as e:
                 logging.error(f"Error leaving chat room: {e}")
                 return
-            logging.error(f"Left {streamer_name}'s chat room")
+            logging.info(f"Left {streamer_name}'s chat room")
 
     async def on_message(self, msg: ChatMessage):
         if not is_valid_message(msg):
