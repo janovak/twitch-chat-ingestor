@@ -45,15 +45,22 @@ class ChatRoomJoiner:
         await self.twitch_session.initialize_chat()
 
     async def handle_expiring_keys(self):
+        logging.info(f"Redis keys expiring")
+
         pubsub = self.redis_cache.pubsub()
         await pubsub.psubscribe("__keyevent@0__:expired")
         events = pubsub.listen()
+
+        logging.info(f"Redis keys expiring1")
 
         # Skip the first message since it's not an actual streamer
         async for message in events:
             break
 
+        logging.info(f"Redis keys expiring2")
+
         async for message in events:
+            logging.info(f"Redis keys expiring {message}")
             # Should await these tasks, but not critical. Awaiting will just help with a graceful shutdown
             asyncio.create_task(self.streamer_went_offline_callback(message))
 
