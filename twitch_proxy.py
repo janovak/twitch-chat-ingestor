@@ -154,7 +154,7 @@ class TwitchAPIConnection:
                     logging.error(f"Failed to join the chat room.")
                     return
             except asyncio.exceptions.CancelledError:
-                logging.error(f"Error joining chat room: {e}")
+                logging.error(f"Cancellation exception while joining chat room: {e}")
                 return
             except Exception as e:
                 logging.error(f"Error joining chat room: {e}")
@@ -166,7 +166,7 @@ class TwitchAPIConnection:
             try:
                 await self.chat.leave_room(streamer_name)
             except asyncio.exceptions.CancelledError as e:
-                logging.error(f"Error leaving chat room: {e}")
+                logging.error(f"Cancellation exception while leaving chat room: {e}")
                 return
             except Exception as e:
                 logging.error(f"Error leaving chat room: {e}")
