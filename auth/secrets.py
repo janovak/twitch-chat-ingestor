@@ -111,3 +111,7 @@ def get_neon_url():
 
 def get_cloudamqp_url():
     return "127.0.0.1"  # load_cloudamqp_secrets()["cloudAMQPURL"]
+
+
+def get_kafka_broker_url():
+    return "127.0.0.1"

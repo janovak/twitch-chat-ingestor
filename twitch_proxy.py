@@ -3,19 +3,16 @@ import json
 import logging
 import uuid
 import auth.secrets as secrets
-import pika
 import utilities
-
 from prometheus_client import Counter
 from twitchAPI.chat import Chat, ChatMessage
-from twitchAPI.oauth import UserAuthenticator
 from twitchAPI.twitch import Twitch
 from twitchAPI.type import AuthScope, ChatEvent
 from twitchAPI.helper import first
+from confluent_kafka import Producer
 
 
 def is_valid_message(msg: ChatMessage):
-    # Only validate the fields we a need to insert the message into the database
     if msg is None:
         logging.warning("msg is None")
         return False
@@ -34,7 +31,6 @@ def is_valid_message(msg: ChatMessage):
     elif msg.user is None:
         logging.warning("msg.user is None")
         return False
-
     return True
 
 
@@ -100,33 +96,23 @@ class TwitchAPIConnection:
             ["broadcaster_id"],
         )
 
-        self.message_queue_connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host=secrets.get_cloudamqp_url())
-        )
-        self.channel = self.message_queue_connection.channel()
-        self.channel.confirm_delivery()
-
-        # Create a fanout exchange to publish the chat messages to so that any service that needs
-        # this information can bind a queue to this exchange
-        self.chat_exchange = "chat_fanout"
-        self.channel.exchange_declare(self.chat_exchange, exchange_type="fanout")
+        self.producer = Producer({"bootstrap.servers": secrets.get_kafka_broker_url()})
+        self.chat_topic = "chat_topic"
 
     def __del__(self):
         self.close()
 
     def close(self):
-        self.message_queue_connection.close()
-
         if self.chat:
             self.chat.stop()
 
         if self.twitch_session:
             if asyncio.get_event_loop().is_running():
-                # Schedule cleanup task in the event loop
                 asyncio.ensure_future(self.cleanup_async())
             else:
-                # If event loop is not running, run cleanup synchronously
                 asyncio.run(self.cleanup_async())
+
+        self.producer.flush()  # Ensure all messages are sent
 
     async def cleanup_async(self):
         await self.twitch_session.close()
@@ -188,7 +174,6 @@ class TwitchAPIConnection:
         if self.messages_sent % 100000 == 0:
             logging.info(f"messages sent: {self.messages_sent}")
 
-        # Extract relevant fields from the message and serialize it to JSON
         message_fields = {
             "broadcaster_id": int(msg.room.room_id),
             "timestamp": msg.sent_timestamp,
@@ -207,22 +192,20 @@ class TwitchAPIConnection:
 
         try:
             async with self.channel_lock:
-                self.channel.basic_publish(
-                    exchange=self.chat_exchange,
-                    routing_key="",
-                    body=message,
-                    properties=pika.BasicProperties(
-                        delivery_mode=pika.DeliveryMode.Persistent
-                    ),
+                self.producer.produce(
+                    self.chat_topic,
+                    value=message,
+                    key=str(message_fields["broadcaster_id"]),
                 )
+                self.producer.poll(0)
 
             logging.debug(
-                f"Published message, {message_fields['message_id']}, which was posted in chat room {message_fields['broadcaster_id']} at {message_fields['timestamp']}, to the message queue"
+                f"Published message, {message_fields['message_id']}, which was posted in chat room {message_fields['broadcaster_id']} at {message_fields['timestamp']}, to Kafka"
             )
         except Exception as e:
             logging.error(f"Publishing message error: {e}")
             logging.error(
-                f"Failed to publish message, {message_fields['message_id']}, which was posted in chat room {message_fields['broadcaster_id']} at {message_fields['timestamp']}, to the message queue"
+                f"Failed to publish message, {message_fields['message_id']}, which was posted in chat room {message_fields['broadcaster_id']} at {message_fields['timestamp']}, to Kafka"
             )
 
     async def get_online_streamers(self, batch_size):
