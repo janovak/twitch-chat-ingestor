@@ -65,9 +65,7 @@ class ChatRoomJoiner:
         if streamer in self.online_streamers:
             self.online_streamers.remove(streamer)
 
-        # TODO await this task during shutdown
-        # real fix it to patch pytwitchapi by adding timeout to leave_room
-        asyncio.create_task(self.twitch_session.leave_chat_room(streamer))
+        await asyncio.create_task(self.twitch_session.leave_chat_room(streamer))
 
     async def start_consuming_streamers(self):
         connection = await aio_pika.connect_robust(
@@ -89,8 +87,12 @@ class ChatRoomJoiner:
 
         async with broadcaster_queue.iterator() as queue_iter:
             async for message in queue_iter:
-                async with message.process():
-                    await self.handle_live_streamers(message)
+                async with message.process(ignore_processed=True):
+                    try:
+                        await self.handle_live_streamers(message)
+                    except Exception as e:
+                        logging.error(f"Error processing message: {e}")
+                        await message.reject(requeue=False)
 
     async def check_rate_limiter_with_retry(self, timeout):
         while True:
@@ -121,7 +123,7 @@ class ChatRoomJoiner:
 
         logging.info(f"{user_login} is currently live")
 
-        if user_login not in self.online_streamers and rank < 2:
+        if user_login not in self.online_streamers and rank < 50:
             logging.info(f"{user_login} just came online")
 
             # Bypass rate limiter while figuring out 'StatusCode.UNIMPLEMENTED Method not found!' issue
@@ -141,10 +143,6 @@ async def main():
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
-
-    # Only show warnings and above from twitchAPI
-    twitch_chat_logger = logging.getLogger("twitchAPI.chat")
-    twitch_chat_logger.setLevel(logging.WARNING)
 
     start_http_server(9100)
 

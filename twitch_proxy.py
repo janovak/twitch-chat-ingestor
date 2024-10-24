@@ -147,35 +147,33 @@ class TwitchAPIConnection:
         self.chat.start()
 
     async def join_chat_room(self, streamer_name):
-        async with self.write_lock:
-            try:
-                failed_to_join = await self.chat.join_room(streamer_name)
-                if failed_to_join:
-                    logging.error(f"Failed to join {streamer_name}'s chat room.")
-                    return
-            except asyncio.exceptions.CancelledError:
-                logging.error(
-                    f"Cancellation exception while joining {streamer_name}'s chat room: {e}"
-                )
+        try:
+            failed_to_join = await self.chat.join_room(streamer_name)
+            if failed_to_join:
+                logging.error(f"Failed to join {streamer_name}'s chat room.")
                 return
-            except Exception as e:
-                logging.error(f"Error joining {streamer_name}'s chat room: {e}")
-                return
-            logging.info(f"Joined {streamer_name}'s chat room")
+        except asyncio.exceptions.CancelledError:
+            logging.error(
+                f"Cancellation exception while joining {streamer_name}'s chat room: {e}"
+            )
+            return
+        except Exception as e:
+            logging.error(f"Error joining {streamer_name}'s chat room: {e}")
+            return
+        logging.info(f"Joined {streamer_name}'s chat room")
 
     async def leave_chat_room(self, streamer_name):
-        async with self.write_lock:
-            try:
-                await self.chat.leave_room(streamer_name)
-            except asyncio.exceptions.CancelledError as e:
-                logging.error(
-                    f"Cancellation exception while {streamer_name}'s leaving chat room: {e}"
-                )
-                return
-            except Exception as e:
-                logging.error(f"Error leaving {streamer_name}'s chat room: {e}")
-                return
-            logging.info(f"Left {streamer_name}'s chat room")
+        try:
+            await self.chat.leave_room(streamer_name)
+        except asyncio.exceptions.CancelledError as e:
+            logging.error(
+                f"Cancellation exception while {streamer_name}'s leaving chat room: {e}"
+            )
+            return
+        except Exception as e:
+            logging.error(f"Error leaving {streamer_name}'s chat room: {e}")
+            return
+        logging.info(f"Left {streamer_name}'s chat room")
 
     async def on_message(self, msg: ChatMessage):
         if not is_valid_message(msg):
@@ -186,7 +184,7 @@ class TwitchAPIConnection:
 
         self.messages_sent += 1
         if self.messages_sent % 100000 == 0:
-            logging.info(f"messages sent: {self.messages_sent}")
+            logging.info(f"Messages sent: {self.messages_sent}")
 
         # Extract relevant fields from the message and serialize it to JSON
         message_fields = {
