@@ -2,7 +2,7 @@ import asyncio
 import json
 import logging
 from datetime import datetime
-from aio_pika import connect_robust, ExchangeType
+from confluent_kafka import Consumer, KafkaError
 
 import auth.secrets as secrets
 import chat_database_connection
@@ -12,28 +12,41 @@ import twitch_proxy
 class ClipCreator:
     def __init__(self):
         self.twitch_session = twitch_proxy.TwitchAPIConnection()
-
         self.database = chat_database_connection.DatabaseConnection("chat_data")
+        self.consumer = None
 
     async def authenticate(self):
         await self.twitch_session.authenticate()
 
     async def start_consuming_chats(self):
-        connection = await connect_robust(
-            "amqp://guest:guest@localhost:5672/", heartbeat=60
-        )
-        channel = await connection.channel()
+        # Kafka consumer configuration
+        conf = {
+            "bootstrap.servers": secrets.get_kafka_broker_url(),
+            "group.id": "anomaly_group",  # Consumer group ID
+            "auto.offset.reset": "earliest",  # Start reading at the earliest message
+        }
 
-        await channel.set_qos(prefetch_count=1)
-        exchange = await channel.declare_exchange("anomaly_fanout", ExchangeType.FANOUT)
-        queue = await channel.declare_queue("anomaly_queue", durable=True)
-        await queue.bind(exchange)
+        # Create the Kafka consumer
+        self.consumer = Consumer(conf)
+        self.consumer.subscribe(["anomalies"])  # Subscribe to the topic
 
-        async with queue.iterator() as queue_iter:
-            async for message in queue_iter:
-                async with message.process():
-                    body = json.loads(message.body.decode())
-                    await self.handle_chat_message_async(body)
+        try:
+            while True:
+                msg = self.consumer.poll(1.0)  # Wait for a message
+                if msg is None:
+                    continue
+                if msg.error():
+                    if msg.error().code() == KafkaError._PARTITION_EOF:
+                        # End of partition event
+                        continue
+                    else:
+                        logging.error(f"Error while consuming message: {msg.error()}")
+                        continue
+
+                body = json.loads(msg.value().decode())
+                await self.handle_chat_message_async(body)
+        finally:
+            self.consumer.close()  # Ensure the consumer is closed on exit
 
     async def handle_chat_message_async(self, message_fields):
         broadcaster_id = str(message_fields["broadcaster_id"])
@@ -70,7 +83,11 @@ class ClipCreator:
             logging.error(f"Exception: {e}")
 
     async def shutdown(self):
+        # Close the database connection
         self.database.close()
+        # Ensure the consumer is closed
+        if self.consumer:
+            self.consumer.close()
 
 
 async def main():

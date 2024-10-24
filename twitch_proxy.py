@@ -97,7 +97,7 @@ class TwitchAPIConnection:
         )
 
         self.producer = Producer({"bootstrap.servers": secrets.get_kafka_broker_url()})
-        self.chat_topic = "chat_topic"
+        self.chat_topic = "twitch-chat-messages"
 
     def __del__(self):
         self.close()

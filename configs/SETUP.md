@@ -39,12 +39,20 @@
     scp -r -i ~/Downloads/ssh-key.key ~/Downloads/secrets ubuntu@<destination_ip>:/home/ubuntu/repos/twitch-chat-ingestor
     ```
 
-- Set up RabbitMQ server:
+- Set up Kafka server:
+  - Download Kafka:
     ```bash
-    sudo apt install rabbitmq-server -y
-    sudo systemctl start rabbitmq-server
-    sudo systemctl enable rabbitmq-server
+    wget https://downloads.apache.org/kafka/3.8.0/kafka_2.13-3.8.0.tgz
     ```
+  - Configure the server:
+    ```bash
+    KAFKA_CLUSTER_ID="$(bin/kafka-storage.sh random-uuid)"
+    bin/kafka-storage.sh format -t $KAFKA_CLUSTER_ID -c config/kraft/server.properties
+    bin/kafka-server-start.sh config/kraft/server.properties
+    ```
+  - **Note:** Consider making changes for underpowered machines:
+    - Lower the memory usage by modifying `KAFKA_HEAP_OPTS` in `kafka-server-start.sh`.
+    - Decrease disk space usage by modifying `log.retention.bytes` in `server.properties`.
 
 - Enable and start services services:
      ```bash

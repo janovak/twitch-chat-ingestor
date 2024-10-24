@@ -1,32 +1,33 @@
 import json
 import logging
+import re
 from collections import defaultdict
 from prometheus_client import start_http_server, Counter
+from confluent_kafka import Consumer, Producer, KafkaError
 
 import auth.secrets as secrets
-import pika
 from time_bucket_list import TimeBucketList
-import re
 
 
 class AnomalyDetector:
     def __init__(self):
-        self.message_queue_connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host=secrets.get_cloudamqp_url())
-        )
-        self.channel = self.message_queue_connection.channel()
+        # Kafka Producer configuration
+        self.producer_conf = {
+            "bootstrap.servers": secrets.get_kafka_broker_url(),
+            "client.id": "anomaly_detector",
+        }
+        self.producer = Producer(self.producer_conf)
 
-        # All chat messages are published to the chat exchange
-        self.chat_exchange = "chat_fanout"
-        self.channel.exchange_declare(self.chat_exchange, exchange_type="fanout")
+        # Kafka Consumer configuration
+        self.consumer_conf = {
+            "bootstrap.servers": secrets.get_kafka_broker_url(),  # Change as necessary
+            "group.id": "anomaly_detector_group",  # Consumer group ID
+            "auto.offset.reset": "earliest",  # Start reading at the earliest message
+        }
+        self.consumer = Consumer(self.consumer_conf)
+        self.consumer.subscribe(["twitch-chat-messages"])  # Subscribe to the topic
 
-        self.chat_queue = "chat_anomaly_detection_queue"
-        self.channel.queue_declare(queue=self.chat_queue, durable=True)
-
-        self.channel.queue_bind(exchange=self.chat_exchange, queue=self.chat_queue)
-
-        self.anomaly_exchange = "anomaly_fanout"
-        self.channel.exchange_declare(self.anomaly_exchange, exchange_type="fanout")
+        self.anomaly_topic = "anomalies"
 
         def time_bucket_list_factory(bucket_size):
             return TimeBucketList(bucket_size)
@@ -49,19 +50,31 @@ class AnomalyDetector:
         self.shutdown()
 
     def shutdown(self):
-        self.message_queue_connection.close()
+        self.consumer.close()
+        self.producer.flush()  # Ensure all messages are sent
 
     def start_consuming_chats(self):
-        self.channel.basic_qos(prefetch_count=1)
-        self.channel.basic_consume(
-            queue=self.chat_queue, on_message_callback=self.handle_chat_message
-        )
-        logging.info("Start consuming chats from queue")
-        self.channel.start_consuming()
+        logging.info("Start consuming chats from Kafka topic")
+        try:
+            while True:
+                msg = self.consumer.poll(1.0)  # Wait for a message
+                if msg is None:
+                    continue
+                if msg.error():
+                    if msg.error().code() == KafkaError._PARTITION_EOF:
+                        # End of partition event
+                        continue
+                    else:
+                        logging.error(f"Error while consuming message: {msg.error()}")
+                        continue
 
-    def handle_chat_message(self, ch, method, properties, body):
-        message_fields = json.loads(body.decode())
+                message_fields = json.loads(msg.value().decode())
+                self.handle_chat_message(message_fields)
 
+        except KeyboardInterrupt:
+            logging.info("Stopping consumer...")
+
+    def handle_chat_message(self, message_fields):
         broadcaster_id = message_fields["broadcaster_id"]
 
         if self.total_message_count % 100000 == 0:
@@ -81,8 +94,7 @@ class AnomalyDetector:
         # Don't count commands in anomaly detection. We don't want to clip streamers doing giveaways, predictions, etc.
         message_text = json.loads(message_fields["message"])
         if starts_with_valid_command(message_text["text"]):
-            ch.basic_ack(delivery_tag=method.delivery_tag)
-            return
+            return  # Do not process this message further
 
         timestamp = message_fields["timestamp"] // 1000
         self.anomaly_detection_per_broadcaster[broadcaster_id].append(timestamp)
@@ -104,13 +116,10 @@ class AnomalyDetector:
                 message = json.dumps(
                     {"broadcaster_id": broadcaster_id, "timestamp": timestamp}
                 )
-                self.channel.basic_publish(
-                    exchange=self.anomaly_exchange,
-                    routing_key="",
-                    body=message,
-                    properties=pika.BasicProperties(
-                        delivery_mode=pika.DeliveryMode.Persistent
-                    ),
+                self.producer.produce(
+                    self.anomaly_topic,
+                    value=message,
+                    callback=self.delivery_report,
                 )
 
                 self.anomaly_counter.labels(broadcaster_id=broadcaster_id).inc()
@@ -119,7 +128,12 @@ class AnomalyDetector:
                     f"Anomaly detected in {broadcaster_id}'s chat room, but we're in the cooldown period"
                 )
 
-        ch.basic_ack(delivery_tag=method.delivery_tag)
+    def delivery_report(self, err, msg):
+        """Delivery report for asynchronous produce() calls."""
+        if err is not None:
+            logging.error(f"Message delivery failed: {err}")
+        else:
+            logging.info(f"Message delivered to {msg.topic()} [{msg.partition()}]")
 
 
 def main():
