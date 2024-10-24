@@ -22,13 +22,13 @@ class KafkaClient:
         self.producer = Producer(
             {
                 "bootstrap.servers": secrets.get_kafka_broker_url(),
-                "client.id": "twitch-chat-room-joiner",
+                "client.id": "chat-listener",
             }
         )
         self.consumer = Consumer(
             {
                 "bootstrap.servers": secrets.get_kafka_broker_url(),
-                "group.id": "twitch-chat-room-joiner-group",
+                "group.id": "chat-listener-group",
                 "auto.offset.reset": "earliest",
             }
         )
@@ -87,7 +87,7 @@ class ChatRoomJoiner:
         await self.twitch_session.leave_chat_room(streamer)
 
     async def start_consuming_streamers(self):
-        consumer = self.kafka_client.consume("broadcaster_fanout")
+        consumer = self.kafka_client.consume("live_broadcasters")
 
         while True:
             msg = consumer.poll(timeout=1.0)
@@ -144,7 +144,7 @@ class ChatRoomJoiner:
 async def main():
     logging.basicConfig(
         filemode="w",
-        level=logging.DEBUG,
+        level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
