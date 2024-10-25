@@ -2,10 +2,10 @@ import json
 import logging
 import uuid
 from collections import defaultdict
+from confluent_kafka import Consumer, KafkaException
 
 import auth.secrets as secrets
 import chat_database_connection
-import pika
 from datetime_helpers import get_month
 
 
@@ -13,22 +13,20 @@ class ChatIngestor:
     def __init__(self):
         self.database = chat_database_connection.DatabaseConnection("chat_data")
 
-        self.message_queue_connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host=secrets.get_cloudamqp_url())
+        # Kafka consumer configuration
+        self.consumer = Consumer(
+            {
+                "bootstrap.servers": secrets.get_kafka_broker_url(),
+                "group.id": "chat_ingestor_group",
+                "auto.offset.reset": "earliest",
+                "enable.auto.commit": False,
+            }
         )
-        self.channel = self.message_queue_connection.channel()
 
-        # All chat messages are published to the chat exchange
-        self.chat_exchange = "chat_fanout"
-        self.channel.exchange_declare(self.chat_exchange, exchange_type="fanout")
-
-        self.chat_queue = "chat_ingestion_queue"
-        self.channel.queue_declare(queue=self.chat_queue, durable=True)
-
-        self.channel.queue_bind(exchange=self.chat_exchange, queue=self.chat_queue)
+        self.chat_topic = "twitch-chat-messages"
+        self.consumer.subscribe([self.chat_topic])
 
         # Dictionary to hold messages until we have enough to write to the database
-        # The key is the database partition key and value is a list of messages
         self.message_batches = defaultdict(list)
         self.batch_size = 1000
         self.current_batch_size = 0
@@ -37,19 +35,31 @@ class ChatIngestor:
         self.shutdown()
 
     def shutdown(self):
-        self.message_queue_connection.close()
+        self.consumer.close()
         self.database.close()
 
     def start_consuming_chats(self):
-        self.channel.basic_qos(prefetch_count=1)
-        self.channel.basic_consume(
-            queue=self.chat_queue, on_message_callback=self.handle_chat_message
-        )
-        logging.info("Start consuming chats from queue")
-        self.channel.start_consuming()
+        logging.info("Start consuming chats from Kafka topic")
+        try:
+            while True:
+                msg = self.consumer.poll(timeout=1.0)
+                if msg is None:
+                    continue
+                if msg.error():
+                    if msg.error().code() == KafkaException._PARTITION_EOF:
+                        continue
+                    else:
+                        logging.error(msg.error())
+                        break
 
-    def handle_chat_message(self, ch, method, properties, body):
-        message_fields = json.loads(body.decode())
+                self.handle_chat_message(msg)
+        except KeyboardInterrupt:
+            logging.info("Shutting down chat consumer.")
+        finally:
+            self.consumer.close()
+
+    def handle_chat_message(self, msg):
+        message_fields = json.loads(msg.value().decode())
         message_fields["message_id"] = uuid.UUID(message_fields["message_id"])
 
         def get_partition_key(fields):
@@ -76,9 +86,10 @@ class ChatIngestor:
         )
 
         if self.current_batch_size < self.batch_size:
-            ch.basic_ack(delivery_tag=method.delivery_tag)
+            self.consumer.commit(message=msg)
             return
 
+        # Insert data into database and commit offset
         for partition_key, message_list in self.message_batches.items():
             success = self.database.insert_chats([message for message in message_list])
 
@@ -94,7 +105,7 @@ class ChatIngestor:
         self.message_batches = defaultdict(list)
         self.current_batch_size = 0
         logging.info(f"Finished inserting message batch")
-        ch.basic_ack(delivery_tag=method.delivery_tag)
+        self.consumer.commit(message=msg)
 
 
 def main():
