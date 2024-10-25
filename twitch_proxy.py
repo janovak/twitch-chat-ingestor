@@ -1,103 +1,19 @@
 import asyncio
-import json
 import logging
-import uuid
 import auth.secrets as secrets
-import utilities
-from prometheus_client import Counter
-from twitchAPI.chat import Chat, ChatMessage
+from twitchAPI.chat import Chat
 from twitchAPI.twitch import Twitch
 from twitchAPI.type import AuthScope, ChatEvent
 from twitchAPI.helper import first
 from confluent_kafka import Producer
 
 
-def is_valid_message(msg: ChatMessage):
-    if msg is None:
-        logging.warning("msg is None")
-        return False
-    elif msg.id is None or not utilities.is_guid(msg.id):
-        logging.warning(f"msg.id is {msg.id}")
-        return False
-    elif msg.sent_timestamp is None or msg.sent_timestamp <= 0:
-        logging.warning(f"msg.sent_timestamp is {msg.sent_timestamp}")
-        return False
-    elif msg.room is None:
-        logging.warning("msg.room is None")
-        return False
-    elif msg.room.room_id is None or int(msg.room.room_id) <= 0:
-        logging.warning(f"msg.room.room_id is {msg.room.room_id}")
-        return False
-    elif msg.user is None:
-        logging.warning("msg.user is None")
-        return False
-    return True
-
-
-def serialize_message(msg: ChatMessage):
-    room = {
-        "name": msg.room.name,
-        "is_emote_only": msg.room.is_emote_only,
-        "is_subs_only": msg.room.is_subs_only,
-        "is_followers_only": msg.room.is_followers_only,
-        "is_unique_only": msg.room.is_unique_only,
-        "follower_only_delay": msg.room.follower_only_delay,
-        "room_id": msg.room.room_id,
-        "slow": msg.room.slow,
-    }
-
-    user = {
-        "name": msg.user.name,
-        "badge_info": msg.user.badge_info,
-        "badges": msg.user.badges,
-        "color": msg.user.color,
-        "display_name": msg.user.display_name,
-        "mod": msg.user.mod,
-        "subscriber": msg.user.subscriber,
-        "turbo": msg.user.turbo,
-        "id": msg.user.id,
-        "user_type": msg.user.user_type,
-        "vip": msg.user.vip,
-    }
-
-    message = {
-        "text": msg.text,
-        "is_me": msg.is_me,
-        "bits": msg.bits,
-        "sent_timestamp": msg.sent_timestamp,
-        "reply_parent_msg_id": msg.reply_parent_msg_id,
-        "reply_parent_user_id": msg.reply_parent_user_id,
-        "reply_parent_user_login": msg.reply_parent_user_login,
-        "reply_parent_display_name": msg.reply_parent_display_name,
-        "reply_parent_msg_body": msg.reply_parent_msg_body,
-        "reply_thread_parent_msg_id": msg.reply_thread_parent_msg_id,
-        "reply_thread_parent_user_login": msg.reply_thread_parent_user_login,
-        "emotes": msg.emotes,
-        "id": msg.id,
-    }
-
-    message["room"] = room
-    message["user"] = user
-
-    return json.dumps(message)
-
-
 class TwitchAPIConnection:
     def __init__(self):
         self.twitch_session = None
         self.chat = None
-        self.messages_sent = 0
-        self.write_lock = asyncio.Lock()
-        self.channel_lock = asyncio.Lock()
-
-        self.message_counter = Counter(
-            "streamer_message_count",
-            "Number of messages per streamer",
-            ["broadcaster_id"],
-        )
 
         self.producer = Producer({"bootstrap.servers": secrets.get_kafka_broker_url()})
-        self.chat_topic = "twitch-chat-messages"
 
     def __del__(self):
         self.close()
@@ -127,9 +43,9 @@ class TwitchAPIConnection:
             secrets.get_twitch_refresh_token(),
         )
 
-    async def initialize_chat(self):
+    async def initialize_chat(self, callback):
         self.chat = await Chat(self.twitch_session)
-        self.chat.register_event(ChatEvent.MESSAGE, self.on_message)
+        self.chat.register_event(ChatEvent.MESSAGE, callback)
         self.chat.start()
 
     async def join_chat_room(self, streamer_name):
@@ -160,51 +76,6 @@ class TwitchAPIConnection:
             logging.error(f"Error leaving {streamer_name}'s chat room: {e}")
             return
         logging.info(f"Left {streamer_name}'s chat room")
-
-    async def on_message(self, msg: ChatMessage):
-        if not is_valid_message(msg):
-            logging.warning(
-                "Skipping message as it does not contain the necessary fields"
-            )
-            return
-
-        self.messages_sent += 1
-        if self.messages_sent % 100000 == 0:
-            logging.info(f"Messages sent: {self.messages_sent}")
-
-        message_fields = {
-            "broadcaster_id": int(msg.room.room_id),
-            "timestamp": msg.sent_timestamp,
-            "message_id": str(uuid.UUID(msg.id)),
-            "message": serialize_message(msg),
-        }
-        message = json.dumps(message_fields)
-
-        logging.debug(
-            f"Message {message_fields['message_id']} posted in chat room {message_fields['broadcaster_id']} at {message_fields['timestamp']}"
-        )
-
-        self.message_counter.labels(
-            broadcaster_id=message_fields["broadcaster_id"]
-        ).inc()
-
-        try:
-            async with self.channel_lock:
-                self.producer.produce(
-                    self.chat_topic,
-                    value=message,
-                    key=str(message_fields["broadcaster_id"]),
-                )
-                self.producer.poll(0)
-
-            logging.debug(
-                f"Published message, {message_fields['message_id']}, which was posted in chat room {message_fields['broadcaster_id']} at {message_fields['timestamp']}, to Kafka"
-            )
-        except Exception as e:
-            logging.error(f"Publishing message error: {e}")
-            logging.error(
-                f"Failed to publish message, {message_fields['message_id']}, which was posted in chat room {message_fields['broadcaster_id']} at {message_fields['timestamp']}, to Kafka"
-            )
 
     async def get_online_streamers(self, batch_size):
         logging.info(f"Retrieving currently live streamers")
