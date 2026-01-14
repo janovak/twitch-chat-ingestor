@@ -1,6 +1,8 @@
+**ARCHIVED**: This repo is no longer active. The new version is available [here](https://github.com/janovak/stream-scout)
+
 # Twitch Chat Ingestor
 
-While Twitch provides methods to listen to messages that are currently happening, it doesn't provide a way to query old messages. This project's REST API and the microservices that back it provide  functionality to users who want to query old messages for a given streamer.
+While Twitch provides methods to listen to messages that are currently happening, it doesn't provide a way to query old messages. This project's REST API and the microservices that back it provide functionality to users who want to query old messages for a given streamer.
 
 ### REST API
 
